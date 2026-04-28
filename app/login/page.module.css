@@ -1,0 +1,102 @@
+.wrapper {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) var(--space-3);
+  background: var(--color-bg-base);
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: var(--space-5);
+}
+
+.logoGlyph {
+  font-family: 'Courier New', monospace;
+  font-size: 1.2rem;
+  color: var(--color-accent);
+}
+
+.logoText {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.logoText span { color: var(--color-accent); }
+
+.title {
+  font-size: 1.8rem;
+  margin-bottom: var(--space-1);
+}
+
+.subtitle {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-4);
+  font-size: 0.95rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: left;
+}
+
+.dividerLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  color: var(--color-text-dim);
+  font-size: 0.85rem;
+}
+
+.dividerLine::before,
+.dividerLine::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.registerPrompt {
+  font-size: 0.9rem;
+  color: var(--color-text-dim);
+  margin: 0;
+}
+
+.registerPrompt a {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.sentState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sentIcon {
+  font-size: 3.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+.sentHint {
+  color: var(--color-text-dim) !important;
+  font-size: 0.9rem !important;
+  margin-bottom: var(--space-3) !important;
+}

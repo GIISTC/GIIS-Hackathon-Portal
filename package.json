@@ -1,0 +1,29 @@
+{
+  "name": "giis-hackathon-2k26",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "@supabase/ssr": "^0.5.1",
+    "next": "14.2.29",
+    "react": "^18",
+    "react-dom": "^18",
+    "qrcode": "^1.5.4",
+    "html5-qrcode": "^2.3.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5",
+    "eslint": "^8",
+    "eslint-config-next": "14.2.29"
+  }
+}

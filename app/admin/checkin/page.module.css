@@ -1,0 +1,96 @@
+/* Shared admin layout - extend from admin overview */
+.adminWrapper { display: flex; min-height: 100vh; background: var(--color-bg-base); }
+.adminMain { flex: 1; margin-left: 240px; padding: var(--space-6) var(--space-5); min-height: 100vh; }
+
+.pageHeader {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5);
+}
+.pageTitle { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 4px; }
+.pageSub { color: var(--color-text-dim); font-size: 0.9rem; margin: 0; }
+.cardTitle { font-size: 1.1rem; color: var(--color-text-main); margin: 0; }
+.viewToggle { display: flex; gap: 8px; }
+
+/* Check-in Layout */
+.checkinLayout { display: grid; grid-template-columns: 420px 1fr; gap: var(--space-4); align-items: start; }
+.scannerCard { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.scannerWrapper { position: relative; aspect-ratio: 1; background: var(--color-bg-base); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-border); }
+.scannerRegion { width: 100%; height: 100%; }
+.scannerPlaceholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--color-text-dim); }
+.scannerIcon { font-size: 3rem; }
+
+.cornerMarkers { position: absolute; inset: 20px; pointer-events: none; }
+.corner { position: absolute; width: 30px; height: 30px; border-color: var(--color-accent); border-style: solid; }
+.cornerTL { top: 0; left: 0; border-width: 3px 0 0 3px; }
+.cornerTR { top: 0; right: 0; border-width: 3px 3px 0 0; }
+.cornerBL { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+.cornerBR { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+
+.scannerControls {}
+.resultCard { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid; }
+.resultSuccess { background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.3); }
+.resultWarning { background: rgba(255,171,64,0.08); border-color: rgba(255,171,64,0.3); }
+.resultError { background: rgba(255,82,82,0.08); border-color: rgba(255,82,82,0.3); }
+.resultIcon { font-size: 2.5rem; }
+.resultName { font-weight: 700; color: var(--color-text-main); font-size: 1.1rem; }
+.resultMeta { font-size: 0.85rem; color: var(--color-text-dim); }
+.resultStatus { font-size: 0.9rem; color: var(--color-text-muted); margin-top: 4px; }
+
+.recentCard { padding: var(--space-4); }
+.recentList { display: flex; flex-direction: column; gap: 8px; margin-top: var(--space-3); max-height: 600px; overflow-y: auto; }
+.recentItem { display: flex; align-items: center; gap: 12px; padding: 10px; background: rgba(4,48,76,0.2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.recentAvatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent-dark), var(--color-accent)); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 900; color: var(--color-bg-base); flex-shrink: 0; }
+.recentInfo { flex: 1; }
+.recentName { font-weight: 600; font-size: 0.9rem; color: var(--color-text-main); }
+.recentMeta { font-size: 0.8rem; color: var(--color-text-dim); }
+.recentTime { font-family: var(--font-heading); font-size: 0.75rem; color: var(--color-accent-2); flex-shrink: 0; }
+
+/* Judging Layout */
+.judgingLayout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-4); align-items: start; }
+.teamListCard { padding: var(--space-4); }
+.teamList { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-3); max-height: 700px; overflow-y: auto; }
+.teamItem { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+.teamItem:hover { background: rgba(11,98,121,0.3); border-color: var(--color-border); }
+.teamItemActive { background: rgba(0,212,180,0.1) !important; border-color: rgba(0,212,180,0.3) !important; }
+.teamItemInfo { flex: 1; min-width: 0; }
+.teamItemName { font-weight: 600; font-size: 0.9rem; color: var(--color-text-main); }
+.teamItemProject { font-size: 0.8rem; color: var(--color-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.scoringCard { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.scoringHeader { display: flex; justify-content: space-between; align-items: flex-start; }
+.scoringTeamName { font-size: 1.3rem; color: var(--color-accent-3); margin-bottom: 4px; }
+.scoringProjectName { color: var(--color-text-muted); font-size: 0.95rem; margin: 0; }
+.totalScoreBadge { text-align: center; }
+.totalScoreNum { font-family: var(--font-heading); font-size: 3rem; font-weight: 900; color: var(--color-accent); line-height: 1; }
+.totalScoreLabel { font-family: var(--font-heading); font-size: 0.75rem; color: var(--color-text-dim); letter-spacing: 1px; }
+.scoringLinks { display: flex; gap: 8px; }
+.scoringDesc { background: rgba(4,48,76,0.3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+.scoringDesc p { font-size: 0.9rem; margin: 0; line-height: 1.6; }
+
+.criteria { display: flex; flex-direction: column; gap: var(--space-3); }
+.criteriaItem { background: rgba(4,48,76,0.2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-2) var(--space-3); }
+.criteriaHeader { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.criteriaLabel { display: flex; align-items: center; gap: 12px; font-size: 1.2rem; }
+.criteriaName { font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; color: var(--color-text-main); }
+.criteriaDesc { font-size: 0.75rem; color: var(--color-text-dim); }
+.criteriaScore { font-family: var(--font-heading); font-size: 1.8rem; font-weight: 900; color: var(--color-accent); line-height: 1; }
+.criteriaScore span { font-size: 0.9rem; color: var(--color-text-dim); }
+
+.sliderWrapper { position: relative; }
+.slider { width: 100%; -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.1); outline: none; }
+.slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--color-accent); cursor: pointer; box-shadow: 0 0 10px rgba(0,212,180,0.5); border: 2px solid var(--color-bg-base); transition: transform 0.1s; }
+.slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.sliderMarks { display: flex; justify-content: space-between; margin-top: 6px; }
+.sliderMark { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.1); transition: background 0.2s; }
+.sliderMarkActive { background: var(--color-accent); }
+
+.scoringEmpty { padding: var(--space-8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; color: var(--color-text-dim); }
+
+.leaderboardCard { padding: var(--space-4); }
+.rankNum { font-family: var(--font-heading); font-weight: 900; font-size: 0.95rem; }
+.totalScore { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 900; color: var(--color-accent); }
+
+@media (max-width: 1100px) {
+  .checkinLayout, .judgingLayout { grid-template-columns: 1fr; }
+  .adminMain { margin-left: 0; padding: var(--space-3); }
+}

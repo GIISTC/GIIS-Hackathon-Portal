@@ -1,0 +1,186 @@
+/* Shared admin layout - extend from admin overview */
+.adminWrapper { display: flex; min-height: 100vh; background: var(--color-bg-base); }
+.adminMain { flex: 1; margin-left: 240px; padding: var(--space-6) var(--space-5); min-height: 100vh; }
+
+.pageHeader {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-5);
+}
+.pageTitle { font-size: clamp(1.8rem, 3vw, 2.5rem); margin-bottom: 4px; }
+.pageSub { color: var(--color-text-dim); font-size: 0.9rem; margin: 0; }
+.cardTitle { font-size: 1.1rem; color: var(--color-text-main); margin: 0; }
+.viewToggle { display: flex; gap: 8px; }
+
+/* Check-in Layout */
+.checkinLayout { display: grid; grid-template-columns: 420px 1fr; gap: var(--space-4); align-items: start; }
+.scannerCard { padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+.scannerWrapper { position: relative; aspect-ratio: 1; background: var(--color-bg-base); border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-border); }
+.scannerRegion { width: 100%; height: 100%; }
+.scannerPlaceholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--color-text-dim); }
+.scannerIcon { font-size: 3rem; }
+
+.cornerMarkers { position: absolute; inset: 20px; pointer-events: none; }
+.corner { position: absolute; width: 30px; height: 30px; border-color: var(--color-accent); border-style: solid; }
+.cornerTL { top: 0; left: 0; border-width: 3px 0 0 3px; }
+.cornerTR { top: 0; right: 0; border-width: 3px 3px 0 0; }
+.cornerBL { bottom: 0; left: 0; border-width: 0 0 3px 3px; }
+.cornerBR { bottom: 0; right: 0; border-width: 0 3px 3px 0; }
+
+.scannerControls {}
+.resultCard { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid; }
+.resultSuccess { background: rgba(0,230,118,0.08); border-color: rgba(0,230,118,0.3); }
+.resultWarning { background: rgba(255,171,64,0.08); border-color: rgba(255,171,64,0.3); }
+.resultError { background: rgba(255,82,82,0.08); border-color: rgba(255,82,82,0.3); }
+.resultIcon { font-size: 2.5rem; }
+.resultName { font-weight: 700; color: var(--color-text-main); font-size: 1.1rem; }
+.resultMeta { font-size: 0.85rem; color: var(--color-text-dim); }
+.resultStatus { font-size: 0.9rem; color: var(--color-text-muted); margin-top: 4px; }
+
+.recentCard { padding: var(--space-4); }
+.recentList { display: flex; flex-direction: column; gap: 8px; margin-top: var(--space-3); max-height: 600px; overflow-y: auto; }
+.recentItem { display: flex; align-items: center; gap: 12px; padding: 10px; background: rgba(4,48,76,0.2); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.recentAvatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--color-accent-dark), var(--color-accent)); display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 900; color: var(--color-bg-base); flex-shrink: 0; }
+.recentInfo { flex: 1; }
+.recentName { font-weight: 600; font-size: 0.9rem; color: var(--color-text-main); }
+.recentMeta { font-size: 0.8rem; color: var(--color-text-dim); }
+.recentTime { font-family: var(--font-heading); font-size: 0.75rem; color: var(--color-accent-2); flex-shrink: 0; }
+
+/* Judging Layout */
+.judgingLayout { display: grid; grid-template-columns: 300px 1fr; gap: var(--space-4); align-items: start; }
+.teamListCard { padding: var(--space-4); }
+.teamList { display: flex; flex-direction: column; gap: 6px; margin-top: var(--space-3); max-height: 700px; overflow-y: auto; }
+.teamItem { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+.teamItem:hover { background: rgba(11,98,121,0.3); border-color: var(--color-border); }
+.teamItemActive { background: rgba(0,212,180,0.1) !important; border-color: rgba(0,212,180,0.3) !important; }
+.teamItemInfo { flex: 1; min-width: 0; }
+.teamItemName { font-weight: 600; font-size: 0.9rem; color: var(--color-text-main); }
+.teamItemProject { font-size: 0.8rem; color: var(--color-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.leaderboardCard { padding: var(--space-4); }
+
+.judgingContainer { display: flex; flex-direction: column; gap: var(--space-4); }
+.gavelLayout { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); }
+.gavelInstructions { text-align: center; max-width: 600px; }
+.gavelInstructions h3 { color: var(--color-text-main); font-size: 1.5rem; margin-bottom: 8px; }
+.gavelInstructions p { color: var(--color-text-dim); margin-bottom: 16px; }
+
+.gavelProjects { display: flex; gap: var(--space-4); width: 100%; align-items: stretch; justify-content: center; position: relative; }
+.gavelVs { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; background: var(--color-bg-base); border: 2px solid var(--color-border); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-heading); font-weight: 900; color: var(--color-accent); z-index: 10; }
+
+.gavelCard { flex: 1; max-width: 500px; padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); border: 2px solid transparent; transition: border-color 0.2s; }
+.gavelCard:hover { border-color: rgba(0,212,180,0.3); }
+
+.gavelCardHeader { display: flex; flex-direction: column; gap: 4px; border-bottom: 1px solid var(--color-border); padding-bottom: 12px; }
+.teamTag { font-size: 0.8rem; color: var(--color-accent-2); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.gavelProjectName { font-size: 1.5rem; margin: 0; color: var(--color-text-main); }
+
+.gavelDesc { font-size: 0.95rem; line-height: 1.6; color: var(--color-text-dim); flex: 1; min-height: 150px; white-space: pre-wrap; }
+.gavelLinks { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+
+.voteBtn { padding: 16px; font-size: 1.1rem; letter-spacing: 1px; }
+
+.scoringEmpty { padding: var(--space-8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; color: var(--color-text-dim); width: 100%; }
+
+/* Command Center */
+.commandCenter {
+  background: linear-gradient(135deg, rgba(10, 40, 60, 0.6), rgba(5, 20, 30, 0.4));
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.commandHeader h3 { font-size: 1.1rem; margin: 0; color: var(--color-accent); text-transform: uppercase; letter-spacing: 1.5px; }
+.commandHeader p { font-size: 0.8rem; margin: 0; color: var(--color-text-dim); }
+
+.toggleGrid { display: flex; gap: var(--space-4); flex: 1; justify-content: flex-end; }
+.toggleItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0,0,0,0.2);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  min-width: 220px;
+}
+.toggleInfo { flex: 1; display: flex; flex-direction: column; }
+.toggleLabel { font-size: 0.8rem; font-weight: 700; color: var(--color-text-main); }
+.toggleDesc { font-size: 0.7rem; color: var(--color-text-dim); text-transform: uppercase; }
+
+/* Gavel Health Monitor */
+.healthMonitor {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr) 2fr;
+  gap: var(--space-4);
+  background: rgba(11, 31, 51, 0.4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+  align-items: center;
+}
+
+.statBox {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+}
+
+.statValue {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text-main);
+  font-family: var(--font-heading);
+}
+
+.statValue.ready {
+  color: var(--color-accent-3);
+  text-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+}
+
+.progressContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progressBar {
+  height: 12px;
+  background: var(--color-bg-base);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-accent-dark), var(--color-accent));
+  box-shadow: 0 0 15px var(--color-accent-dark);
+  transition: width 0.5s ease-out;
+}
+
+.progressText {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  text-align: right;
+}
+
+@media (max-width: 1100px) {
+  .checkinLayout, .judgingLayout { grid-template-columns: 1fr; }
+  .adminMain { margin-left: 0; padding: var(--space-3); }
+  .healthMonitor { grid-template-columns: repeat(2, 1fr); }
+}

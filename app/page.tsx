@@ -1,10 +1,10 @@
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import Navbar from '@/components/Navbar'
 import styles from './page.module.css'
 
-const CountdownTimer = dynamic(() => import('@/components/CountdownTimer'), { ssr: false })
-const HeroCanvas = dynamic(() => import('@/components/HeroCanvas'), { ssr: false })
+const CountdownTimer = nextDynamic(() => import('@/components/CountdownTimer'), { ssr: false })
+const HeroCanvas = nextDynamic(() => import('@/components/HeroCanvas'), { ssr: false })
 
 export const dynamic = 'force-dynamic'
 

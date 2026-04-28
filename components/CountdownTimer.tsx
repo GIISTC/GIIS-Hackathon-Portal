@@ -22,10 +22,14 @@ function getTimeLeft(target: string): TimeLeft {
 }
 
 export default function CountdownTimer({ targetDate }: { targetDate: string }) {
-  const [time, setTime] = useState<TimeLeft>(getTimeLeft(targetDate))
+  const [time, setTime] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+  const [mounted, setMounted] = useState(false)
   const [ticking, setTicking] = useState<string | null>(null)
 
   useEffect(() => {
+    setMounted(true)
+    setTime(getTimeLeft(targetDate))
+    
     const timer = setInterval(() => {
       const newTime = getTimeLeft(targetDate)
       // Detect which unit just changed for tick animation
@@ -49,6 +53,8 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
   ]
 
   const isOver = time.days === 0 && time.hours === 0 && time.minutes === 0 && time.seconds === 0
+
+  if (!mounted) return <div className={styles.countdown} style={{ visibility: 'hidden' }}>Loading...</div>
 
   if (isOver) {
     return (

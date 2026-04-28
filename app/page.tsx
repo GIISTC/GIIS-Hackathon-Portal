@@ -4,6 +4,8 @@ import CountdownTimer from '@/components/CountdownTimer'
 import HeroCanvas from '@/components/HeroCanvas'
 import styles from './page.module.css'
 
+export const dynamic = 'force-dynamic'
+
 export default function HomePage() {
   return (
     <>

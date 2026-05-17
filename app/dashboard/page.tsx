@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -10,13 +10,12 @@ import styles from './page.module.css'
 
 export default function DashboardPage() {
   const router = useRouter()
-  const qrRef = useRef<HTMLCanvasElement>(null)
   const [participant, setParticipant] = useState<Participant | null>(null)
   const [team, setTeam] = useState<Team | null>(null)
   const [teammates, setTeammates] = useState<Participant[]>([])
   const [submission, setSubmission] = useState<Submission | null>(null)
   const [loading, setLoading] = useState(true)
-  const [qrGenerated, setQrGenerated] = useState(false)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [switchLoading, setSwitchLoading] = useState(false)
   const [switchCode, setSwitchCode] = useState('')
   const [switchError, setSwitchError] = useState<string | null>(null)
@@ -83,41 +82,31 @@ export default function DashboardPage() {
       setSubmission(sub)
 
       setLoading(false)
+
+      // Generate QR as data URL — no DOM ref needed
+      if (part.qr_token) {
+        try {
+          const QRCode = (await import('qrcode')).default
+          const payload = JSON.stringify({ token: part.qr_token, name: part.full_name })
+          const url = await QRCode.toDataURL(payload, {
+            width: 280,
+            margin: 2,
+            color: { dark: '#00d4b4', light: '#030d1a' },
+          })
+          setQrDataUrl(url)
+        } catch (err) {
+          console.error('QR generation error:', err)
+        }
+      }
     }
     load()
   }, [router])
 
-  // Generate QR after participant loads and canvas is in the DOM
-  useEffect(() => {
-    if (participant?.qr_token && !qrGenerated) {
-      generateQR(participant.qr_token, participant.full_name)
-    }
-  }, [participant, qrGenerated])
-
-  const generateQR = async (token: string, name: string) => {
-    if (!qrRef.current) return
-    try {
-      const QRCode = (await import('qrcode')).default
-      const payload = JSON.stringify({ token, name })
-      await QRCode.toCanvas(qrRef.current, payload, {
-        width: 280,
-        margin: 2,
-        color: {
-          dark: '#00d4b4',
-          light: '#030d1a',
-        },
-      })
-      setQrGenerated(true)
-    } catch (err) {
-      console.error('QR generation error:', err)
-    }
-  }
-
   const downloadQR = () => {
-    if (!qrRef.current || !participant) return
+    if (!qrDataUrl || !participant) return
     const link = document.createElement('a')
     link.download = `GIIS-Hack-2K26-QR-${participant.full_name.replace(/\s+/g, '-')}.png`
-    link.href = qrRef.current.toDataURL('image/png')
+    link.href = qrDataUrl
     link.click()
   }
 
@@ -334,10 +323,17 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className={styles.qrWrapper}>
-                <canvas ref={qrRef} className={styles.qrCanvas} />
-                {!qrGenerated && (
+                {qrDataUrl ? (
+                  <img
+                    src={qrDataUrl}
+                    alt="Your QR Code"
+                    className={styles.qrCanvas}
+                    style={{ display: 'block', borderRadius: 8 }}
+                  />
+                ) : (
                   <div className={styles.qrPlaceholder}>
                     <div className="spinner" />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: 8 }}>Generating QR...</p>
                   </div>
                 )}
                 <div className={styles.scanLine} />
@@ -350,7 +346,7 @@ export default function DashboardPage() {
               <button
                 className="btn btn-outline btn-full btn-sm"
                 onClick={downloadQR}
-                disabled={!qrGenerated}
+                disabled={!qrDataUrl}
               >
                 ⬇ Download QR Code
               </button>

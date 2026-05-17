@@ -83,14 +83,16 @@ export default function DashboardPage() {
       setSubmission(sub)
 
       setLoading(false)
-
-      // Generate QR code after data loads
-      if (part.qr_token) {
-        generateQR(part.qr_token, part.full_name)
-      }
     }
     load()
   }, [router])
+
+  // Generate QR after participant loads and canvas is in the DOM
+  useEffect(() => {
+    if (participant?.qr_token && !qrGenerated) {
+      generateQR(participant.qr_token, participant.full_name)
+    }
+  }, [participant, qrGenerated])
 
   const generateQR = async (token: string, name: string) => {
     if (!qrRef.current) return
@@ -301,7 +303,7 @@ export default function DashboardPage() {
                 {switchError && <p className="alert alert-error">{switchError}</p>}
 
                 <button type="submit" className="btn btn-primary btn-full" disabled={switchLoading}>
-                  {switchLoading ? 'Repairing...' : '🚀 Complete Registration'}
+                  {switchLoading ? 'Repairing...' : 'Complete Registration →'}
                 </button>
                 
                 <button type="button" className="btn btn-ghost btn-full" onClick={handleSignOut}>
@@ -361,13 +363,13 @@ export default function DashboardPage() {
             <div className={`card ${styles.navCard}`}>
               <nav className={styles.dashNav}>
                 <Link href="/dashboard" className={`${styles.dashNavLink} ${styles.dashNavActive}`}>
-                  <span>🏠</span> Dashboard
+                  Dashboard
                 </Link>
                 <Link href="/dashboard/submit" className={styles.dashNavLink}>
-                  <span>📦</span> Submit Project
+                  Submit Project
                 </Link>
                 <button onClick={handleSignOut} className={`${styles.dashNavLink} ${styles.dashNavSignout}`}>
-                  <span>🚪</span> Sign Out
+                  Sign Out
                 </button>
               </nav>
             </div>
@@ -379,36 +381,40 @@ export default function DashboardPage() {
             <div className={styles.welcomeBar}>
               <div>
                 <h1 className={styles.welcomeTitle}>
-                  Hey, <span className="text-accent">{participant?.full_name.split(' ')[0]}</span> 👋
+                  Hey, <span className="text-accent">{participant?.full_name.split(' ')[0]}</span>!
                 </h1>
                 <p className={styles.welcomeSub}>Welcome to GIIS Hackathon 2K26 participant portal</p>
               </div>
               <div className={styles.welcomeDate}>
-                <span className="badge badge-teal">📅 Jul 31 – Aug 1</span>
+                <span className="badge badge-teal">Jul 31 – Aug 1</span>
               </div>
             </div>
 
             {/* Status Cards */}
             <div className={styles.statusGrid}>
               <div className={`card ${styles.statusCard}`}>
-                <div className={styles.statusIcon}>👥</div>
+                <div className={`${styles.statusIcon} ${styles.statusIconTeam}`}>T</div>
                 <div className={styles.statusLabel}>Team</div>
                 <div className={styles.statusValue}>{team?.team_name}</div>
               </div>
               <div className={`card ${styles.statusCard}`}>
-                <div className={styles.statusIcon}>📋</div>
+                <div className={`${styles.statusIcon} ${styles.statusIconMembers}`}>M</div>
                 <div className={styles.statusLabel}>Members</div>
                 <div className={styles.statusValue}>{teammates.length + 1} / 4</div>
               </div>
               <div className={`card ${styles.statusCard}`}>
-                <div className={styles.statusIcon}>{participant?.checked_in ? '✅' : '⏳'}</div>
+                <div className={`${styles.statusIcon} ${participant?.checked_in ? styles.statusIconDone : styles.statusIconPending}`}>
+                  {participant?.checked_in ? '✓' : '—'}
+                </div>
                 <div className={styles.statusLabel}>Check-in</div>
                 <div className={styles.statusValue}>
                   {participant?.checked_in ? 'Done' : 'Pending'}
                 </div>
               </div>
               <div className={`card ${styles.statusCard}`}>
-                <div className={styles.statusIcon}>{submission ? '🚀' : '📝'}</div>
+                <div className={`${styles.statusIcon} ${submission ? styles.statusIconDone : styles.statusIconPending}`}>
+                  {submission ? '✓' : '—'}
+                </div>
                 <div className={styles.statusLabel}>Submission</div>
                 <div className={styles.statusValue}>
                   {submission ? 'Submitted' : 'Not yet'}
@@ -427,10 +433,10 @@ export default function DashboardPage() {
                       onClick={() => setShowSwitch(!showSwitch)}
                       style={{ cursor: 'pointer', border: '1px solid var(--color-accent)', background: 'transparent', transition: 'all 0.2s' }}
                     >
-                      {showSwitch ? '✕ Close' : '🔗 Join Different Team'}
+                      {showSwitch ? '✕ Close' : 'Join Different Team'}
                     </button>
                   ) : (
-                    <span className="badge" style={{ opacity: 0.6, border: '1px solid var(--color-border)' }}>🔒 Teams Locked</span>
+                    <span className="badge" style={{ opacity: 0.6, border: '1px solid var(--color-border)' }}>Teams Locked</span>
                   )}
                   <span className="badge badge-teal">{teammates.length + 1} Members</span>
                 </div>
@@ -453,7 +459,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   {switchError && <p className={styles.switchError}>{switchError}</p>}
-                  <p className={styles.switchNote}>⚠️ You will lose access to your current team{"'"}s project submission.</p>
+                  <p className={styles.switchNote}>Note: You will lose access to your current team's project submission.</p>
                 </form>
               )}
 
@@ -497,17 +503,17 @@ export default function DashboardPage() {
                   <div className={styles.submissionLinks}>
                     {submission.github_url && (
                       <a href={submission.github_url} target="_blank" className={styles.linkChip}>
-                        🔗 GitHub Repository
+                        GitHub Repository ↗
                       </a>
                     )}
                     {submission.drive_url && (
                       <a href={submission.drive_url} target="_blank" className={styles.linkChip}>
-                        📁 Drive Link
+                        Drive Link ↗
                       </a>
                     )}
                     {submission.demo_url && (
                       <a href={submission.demo_url} target="_blank" className={styles.linkChip}>
-                        🎬 Demo Video
+                        Demo Video ↗
                       </a>
                     )}
                   </div>
@@ -519,7 +525,7 @@ export default function DashboardPage() {
                 <div className={styles.noSubmission}>
                   <p>Your team hasn{"'"}t submitted a project yet. Submissions open during the hackathon.</p>
                   <Link href="/dashboard/submit" className="btn btn-primary">
-                    🚀 Submit Project
+                    Submit Project →
                   </Link>
                 </div>
               )}
@@ -527,7 +533,7 @@ export default function DashboardPage() {
 
             {/* Hackathon Info */}
             <div className={`card ${styles.sectionCard} ${styles.infoCard}`}>
-              <h3 className={styles.cardTitle}>📋 Quick Info</h3>
+              <h3 className={styles.cardTitle}>Quick Info</h3>
               <div className={styles.infoGrid}>
                 <div className={styles.infoItem}>
                   <span className={styles.infoLabel}>Team Code</span>

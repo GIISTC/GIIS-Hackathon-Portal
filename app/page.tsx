@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import Navbar from '@/components/Navbar'
 import styles from './page.module.css'
@@ -9,7 +10,13 @@ const ScrollReveal = nextDynamic(() => import('@/components/ScrollReveal'), { ss
 
 export const dynamic = 'force-dynamic'
 
-export default function HomePage() {
+export default function HomePage({ searchParams }: { searchParams?: { code?: string } }) {
+  // Supabase sends password-reset links to the Site URL root (e.g. /?code=xxx)
+  // Catch that here and forward to the real callback handler.
+  if (searchParams?.code) {
+    redirect(`/auth/callback?code=${searchParams.code}&next=/auth/reset-password`)
+  }
+
   return (
     <>
       <Navbar />

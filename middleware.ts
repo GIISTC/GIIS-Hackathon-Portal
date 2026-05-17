@@ -2,6 +2,19 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const { pathname, searchParams, origin } = request.nextUrl
+
+  // ── Auth code redirect ─────────────────────────────────────────
+  // Supabase password-reset emails redirect to the Site URL root
+  // with ?code= appended. Forward it to the real callback handler.
+  if (pathname === '/' && searchParams.has('code')) {
+    const code = searchParams.get('code')!
+    const callbackUrl = new URL('/auth/callback', origin)
+    callbackUrl.searchParams.set('code', code)
+    callbackUrl.searchParams.set('next', '/auth/reset-password')
+    return NextResponse.redirect(callbackUrl)
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -74,5 +87,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/dashboard/:path*', '/login', '/register'],
+  matcher: ['/', '/admin/:path*', '/dashboard/:path*', '/login', '/register'],
 }

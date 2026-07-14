@@ -5,8 +5,13 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
-import type { Participant, Team, Submission } from '@/lib/types'
-import styles from './page.module.css'
+import type { Participant, Team, Submission, LeaderboardEntry } from '@/lib/types'
+
+const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
+const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
+const labelCls = 'mb-1.5 block font-mono text-[0.6rem] uppercase tracking-[0.12em] text-brand'
+const primaryBtn = 'rounded-lg bg-gradient-to-br from-brand to-brand-blue py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-base transition-opacity hover:opacity-90 disabled:opacity-50'
+const outlineBtn = 'rounded-lg border border-line py-2.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.12em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5'
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -23,6 +28,7 @@ export default function DashboardPage() {
   const [needsProfile, setNeedsProfile] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [teamSwitchingEnabled, setTeamSwitchingEnabled] = useState(true)
+  const [myRank, setMyRank] = useState<LeaderboardEntry | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -31,72 +37,41 @@ export default function DashboardPage() {
       if (!user) { router.push('/login'); return }
       setUserEmail(user.email || '')
 
-      // Check global settings
-      const { data: settingRow, error: settingError } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'team_switching_enabled')
-        .maybeSingle()
-      
-      if (settingError) {
-        console.error("RLS Error reading team settings:", settingError.message)
-      }
+      const { data: settingRow } = await supabase
+        .from('system_settings').select('value').eq('key', 'team_switching_enabled').maybeSingle()
+      setTeamSwitchingEnabled(settingRow ? settingRow.value === true : false)
 
-      if (settingRow) {
-        setTeamSwitchingEnabled(settingRow.value === true)
-      } else {
-        setTeamSwitchingEnabled(false)
-      }
-
-      // Load participant
       const { data: part, error: partError } = await supabase
-        .from('participants')
-        .select('*, team:teams(*)')
-        .eq('id', user.id)
-        .single()
+        .from('participants').select('*, team:teams(*)').eq('id', user.id).single()
 
-      if (partError || !part) {
-        // Participant record is missing (possibly due to the previous bug)
-        setNeedsProfile(true)
-        setLoading(false)
-        return
-      }
-      
+      if (partError || !part) { setNeedsProfile(true); setLoading(false); return }
+
       setParticipant(part)
       setTeam(part.team as unknown as Team)
 
-      // Load teammates
-      const { data: mates } = await supabase
-        .from('participants')
-        .select('*')
-        .eq('team_id', part.team_id)
-        .neq('id', user.id)
+      fetch('/api/leaderboard').then((r) => r.json()).then((data) => {
+        if (!data?.pools) return
+        const pool = (part.team as any)?.track === 'Game Dev' ? 'game_dev' : 'app_web'
+        for (const category of ['Junior', 'Senior'] as const) {
+          const entry = (data.pools[pool]?.[category] || []).find((e: LeaderboardEntry) => e.team_id === part.team_id)
+          if (entry) { setMyRank(entry); return }
+        }
+      }).catch(() => {})
+
+      const { data: mates } = await supabase.from('participants').select('*').eq('team_id', part.team_id).neq('id', user.id)
       setTeammates(mates || [])
 
-      // Load submission
-      const { data: sub } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('team_id', part.team_id)
-        .single()
+      const { data: sub } = await supabase.from('submissions').select('*').eq('team_id', part.team_id).single()
       setSubmission(sub)
-
       setLoading(false)
 
-      // Generate QR as data URL — no DOM ref needed
       if (part.qr_token) {
         try {
           const QRCode = (await import('qrcode')).default
           const payload = JSON.stringify({ token: part.qr_token, name: part.full_name })
-          const url = await QRCode.toDataURL(payload, {
-            width: 280,
-            margin: 2,
-            color: { dark: '#00d4b4', light: '#030d1a' },
-          })
+          const url = await QRCode.toDataURL(payload, { width: 280, margin: 2, color: { dark: '#2fe6c8', light: '#070c16' } })
           setQrDataUrl(url)
-        } catch (err) {
-          console.error('QR generation error:', err)
-        }
+        } catch (err) { console.error('QR generation error:', err) }
       }
     }
     load()
@@ -119,61 +94,33 @@ export default function DashboardPage() {
   const handleSwitchTeam = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!switchCode.trim() || switchCode.trim().toUpperCase() === team?.team_code) return
-    
     setSwitchLoading(true)
     setSwitchError(null)
     const supabase = createClient()
-
     try {
-      // 1. Find new team
       const { data: newTeam, error: teamErr } = await supabase
-        .from('teams')
-        .select('*, participants(id)')
-        .eq('team_code', switchCode.trim().toUpperCase())
-        .single()
-
+        .from('teams').select('*, participants(id)').eq('team_code', switchCode.trim().toUpperCase()).single()
       if (teamErr || !newTeam) throw new Error('Invalid Team Code.')
       if (newTeam.participants.length >= 4) throw new Error('Target team is already full.')
 
       const oldTeamId = team?.id
       const myId = participant?.id
-
-      // 2. MOVE the participant to the new team FIRST
       const { error: updateErr } = await supabase
-        .from('participants')
-        .update({ team_id: newTeam.id, is_team_leader: false })
-        .eq('id', myId)
-
+        .from('participants').update({ team_id: newTeam.id, is_team_leader: false }).eq('id', myId)
       if (updateErr) throw new Error(`Update failed: ${updateErr.message}`)
 
-      // 3. NOW safely clean up the old team if it is empty
       if (oldTeamId) {
-        const { data: remainingMembers } = await supabase
-          .from('participants')
-          .select('id')
-          .eq('team_id', oldTeamId)
-
+        const { data: remainingMembers } = await supabase.from('participants').select('id').eq('team_id', oldTeamId)
         if (!remainingMembers || remainingMembers.length === 0) {
-          // No one is left in the old team, safe to delete
           await supabase.from('submissions').delete().eq('team_id', oldTeamId)
           await supabase.from('teams').delete().eq('id', oldTeamId)
         } else {
-          // If the old team still has people, ensure there is a leader
-          const hasLeader = await supabase
-            .from('participants')
-            .select('id')
-            .eq('team_id', oldTeamId)
-            .eq('is_team_leader', true)
-            .single()
-
+          const hasLeader = await supabase.from('participants').select('id').eq('team_id', oldTeamId).eq('is_team_leader', true).single()
           if (!hasLeader.data) {
-            await supabase.from('participants')
-              .update({ is_team_leader: true })
-              .eq('id', remainingMembers[0].id)
+            await supabase.from('participants').update({ is_team_leader: true }).eq('id', remainingMembers[0].id)
           }
         }
       }
-
       window.location.reload()
     } catch (err: any) {
       setSwitchError(err.message)
@@ -187,41 +134,22 @@ export default function DashboardPage() {
     const fullName = formData.get('fullname') as string
     const grade = formData.get('grade') as string
     const code = switchCode.trim().toUpperCase()
-
     setSwitchLoading(true)
     setSwitchError(null)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-
     try {
       if (!user) throw new Error('Not authenticated.')
       if (!code) throw new Error('Team code is required.')
-      
-      // 1. Find team
       const { data: targetTeam, error: teamErr } = await supabase
-        .from('teams')
-        .select('*, participants(id)')
-        .eq('team_code', code)
-        .single()
-
+        .from('teams').select('*, participants(id)').eq('team_code', code).single()
       if (teamErr || !targetTeam) throw new Error('Invalid Team Code.')
       if (targetTeam.participants.length >= 4) throw new Error('Team is full.')
-
-      // 2. Create participant record
-      const { error: partError } = await supabase
-        .from('participants')
-        .insert({
-          id: user.id,
-          team_id: targetTeam.id,
-          full_name: fullName,
-          email: user.email,
-          grade: grade,
-          qr_token: crypto.randomUUID(),
-          is_team_leader: false
-        })
-
+      const { error: partError } = await supabase.from('participants').insert({
+        id: user.id, team_id: targetTeam.id, full_name: fullName, email: user.email,
+        grade, qr_token: crypto.randomUUID(), is_team_leader: false,
+      })
       if (partError) throw new Error(partError.message)
-
       window.location.reload()
     } catch (err: any) {
       setSwitchError(err.message)
@@ -231,327 +159,248 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <>
+      <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
-        <div className={styles.wrapper}>
-          <div className="loading-overlay">
-            <div className="spinner" />
-            <span>Loading your dashboard...</span>
-          </div>
+        <div className="flex min-h-screen flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />Loading your dashboard…
         </div>
-      </>
+      </div>
     )
   }
 
   if (needsProfile) {
     return (
-      <>
+      <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
-        <div className={styles.wrapper}>
-          <div className={styles.repairContainer}>
-            <div className={`card ${styles.repairCard}`}>
-              <h2 className={styles.repairTitle}>Finish Your Profile</h2>
-              <p className={styles.repairSub}>
-                Your account exists but we couldn{"'"}t find your team details. Let{"'"}s fix that!
-              </p>
-              
-              <form onSubmit={handleRepairProfile} className={styles.form}>
-                <div className="form-group">
-                  <label className="form-label">Email Address</label>
-                  <input type="text" className="form-control" value={userEmail} disabled />
-                </div>
-                
-                <div className="form-group">
-                  <label className="form-label" htmlFor="fullname">Full Name *</label>
-                  <input id="fullname" name="fullname" type="text" className="form-control" required />
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="grade">Grade *</label>
-                  <select id="grade" name="grade" className="form-control" required>
-                    <option value="" disabled>Select grade</option>
-                    {['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(g => (
-                      <option key={g} value={g}>{g}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="code">Team Code to Join *</label>
-                  <input 
-                    id="code" 
-                    type="text" 
-                    className="form-control" 
-                    placeholder="XJ29B1" 
-                    value={switchCode}
-                    onChange={e => setSwitchCode(e.target.value)}
-                    required 
-                  />
-                </div>
-
-                {switchError && <p className="alert alert-error">{switchError}</p>}
-
-                <button type="submit" className="btn btn-primary btn-full" disabled={switchLoading}>
-                  {switchLoading ? 'Repairing...' : 'Complete Registration →'}
-                </button>
-                
-                <button type="button" className="btn btn-ghost btn-full" onClick={handleSignOut}>
-                  Sign Out
-                </button>
-              </form>
-            </div>
+        <div className="flex min-h-screen items-center justify-center px-4 py-28">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-panel/70 p-8 shadow-panel">
+            <h1 className="font-display text-2xl font-bold text-brand">Finish Your Profile</h1>
+            <p className="mt-1.5 text-sm text-ink-sub">Your account exists but we couldn&apos;t find your team details. Let&apos;s fix that.</p>
+            <form onSubmit={handleRepairProfile} className="mt-6 flex flex-col gap-4">
+              <div>
+                <label className={labelCls}>Email Address</label>
+                <input type="text" className={`${inputCls} opacity-60`} value={userEmail} disabled />
+              </div>
+              <div>
+                <label className={labelCls} htmlFor="fullname">Full Name *</label>
+                <input id="fullname" name="fullname" type="text" className={inputCls} required />
+              </div>
+              <div>
+                <label className={labelCls} htmlFor="grade">Grade *</label>
+                <select id="grade" name="grade" className={inputCls} required defaultValue="">
+                  <option value="" disabled>Select grade</option>
+                  {['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map((g) => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls} htmlFor="code">Team Code to Join *</label>
+                <input id="code" type="text" className={inputCls} placeholder="XJ29B1" value={switchCode} onChange={(e) => setSwitchCode(e.target.value)} required />
+              </div>
+              {switchError && <div className="rounded-lg border border-bad/30 bg-bad/10 px-4 py-2.5 text-sm text-[#fca5a5]">{switchError}</div>}
+              <button type="submit" className={primaryBtn} disabled={switchLoading}>{switchLoading ? 'Repairing…' : 'Complete Registration →'}</button>
+              <button type="button" className="py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-ink-dim hover:text-ink" onClick={handleSignOut}>Sign Out</button>
+            </form>
           </div>
         </div>
-      </>
+      </div>
     )
   }
 
+  const statTile = (label: string, value: string, accent?: string) => (
+    <div className={`${card} text-center`}>
+      <div className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-ink-dim">{label}</div>
+      <div className={`mt-1 font-display text-base font-bold ${accent || 'text-ink'}`}>{value}</div>
+    </div>
+  )
+
   return (
-    <>
+    <div className="min-h-screen bg-base font-body text-ink">
       <Navbar />
-      <div className={styles.wrapper}>
-        <div className={styles.dashboardGrid}>
-
-          {/* ── Sidebar ──────────────────────────────────────── */}
-          <aside className={styles.sidebar}>
-            {/* QR Card */}
-            <div className={`card ${styles.qrCard}`}>
-              <div className={styles.qrHeader}>
-                <p className="section-label" style={{ marginBottom: 0 }}>Your Pass</p>
-                {participant?.checked_in && (
-                  <span className="badge badge-success">✓ Checked In</span>
-                )}
-              </div>
-              <div className={styles.qrWrapper}>
-                {qrDataUrl ? (
-                  <img
-                    src={qrDataUrl}
-                    alt="Your QR Code"
-                    className={styles.qrCanvas}
-                    style={{ display: 'block', borderRadius: 8 }}
-                  />
-                ) : (
-                  <div className={styles.qrPlaceholder}>
-                    <div className="spinner" />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-dim)', marginTop: 8 }}>Generating QR...</p>
-                  </div>
-                )}
-                <div className={styles.scanLine} />
-              </div>
-              <div className={styles.qrInfo}>
-                <p className={styles.qrName}>{participant?.full_name}</p>
-                <p className={styles.qrTeam}>{team?.team_name}</p>
-                <p className={styles.qrGrade}>{participant?.grade}</p>
-              </div>
-              <button
-                className="btn btn-outline btn-full btn-sm"
-                onClick={downloadQR}
-                disabled={!qrDataUrl}
-              >
-                ⬇ Download QR Code
-              </button>
-              <p className={styles.qrNote}>
-                Use this QR code for check-in, food collection, and event access.
-              </p>
+      <div className="mx-auto grid max-w-6xl gap-4 px-4 pb-20 pt-24 lg:grid-cols-[320px_1fr]">
+        {/* Sidebar */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
+          {/* QR card */}
+          <div className={`${card} flex flex-col items-center gap-3 text-center`}>
+            <div className="flex w-full items-center justify-between">
+              <span className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-brand">Your Pass</span>
+              {participant?.checked_in && <span className="rounded-full bg-good/15 px-2.5 py-1 font-mono text-[0.55rem] font-bold uppercase text-good">✓ Checked In</span>}
             </div>
-
-            {/* Nav Links */}
-            <div className={`card ${styles.navCard}`}>
-              <nav className={styles.dashNav}>
-                <Link href="/dashboard" className={`${styles.dashNavLink} ${styles.dashNavActive}`}>
-                  Dashboard
-                </Link>
-                <Link href="/dashboard/submit" className={styles.dashNavLink}>
-                  Submit Project
-                </Link>
-                <button onClick={handleSignOut} className={`${styles.dashNavLink} ${styles.dashNavSignout}`}>
-                  Sign Out
-                </button>
-              </nav>
-            </div>
-          </aside>
-
-          {/* ── Main Content ───────────────────────────────── */}
-          <main className={styles.main}>
-            {/* Welcome */}
-            <div className={styles.welcomeBar}>
-              <div>
-                <h1 className={styles.welcomeTitle}>
-                  Hey, <span className="text-accent">{participant?.full_name.split(' ')[0]}</span>!
-                </h1>
-                <p className={styles.welcomeSub}>Welcome to GIIS Hackathon 2K26 participant portal</p>
-              </div>
-              <div className={styles.welcomeDate}>
-                <span className="badge badge-teal">Jul 31 – Aug 1</span>
-              </div>
-            </div>
-
-            {/* Status Cards */}
-            <div className={styles.statusGrid}>
-              <div className={`card ${styles.statusCard}`}>
-                <div className={`${styles.statusIcon} ${styles.statusIconTeam}`}>T</div>
-                <div className={styles.statusLabel}>Team</div>
-                <div className={styles.statusValue}>{team?.team_name}</div>
-              </div>
-              <div className={`card ${styles.statusCard}`}>
-                <div className={`${styles.statusIcon} ${styles.statusIconMembers}`}>M</div>
-                <div className={styles.statusLabel}>Members</div>
-                <div className={styles.statusValue}>{teammates.length + 1} / 4</div>
-              </div>
-              <div className={`card ${styles.statusCard}`}>
-                <div className={`${styles.statusIcon} ${participant?.checked_in ? styles.statusIconDone : styles.statusIconPending}`}>
-                  {participant?.checked_in ? '✓' : '—'}
-                </div>
-                <div className={styles.statusLabel}>Check-in</div>
-                <div className={styles.statusValue}>
-                  {participant?.checked_in ? 'Done' : 'Pending'}
-                </div>
-              </div>
-              <div className={`card ${styles.statusCard}`}>
-                <div className={`${styles.statusIcon} ${submission ? styles.statusIconDone : styles.statusIconPending}`}>
-                  {submission ? '✓' : '—'}
-                </div>
-                <div className={styles.statusLabel}>Submission</div>
-                <div className={styles.statusValue}>
-                  {submission ? 'Submitted' : 'Not yet'}
-                </div>
-              </div>
-            </div>
-
-            {/* Team Members */}
-            <div className={`card ${styles.sectionCard}`}>
-              <div className="flex-between" style={{ marginBottom: 'var(--space-3)' }}>
-                <h3 className={styles.cardTitle}>Team Members</h3>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {teamSwitchingEnabled ? (
-                    <button 
-                      className={`badge ${showSwitch ? 'badge-error' : 'badge-teal'}`} 
-                      onClick={() => setShowSwitch(!showSwitch)}
-                      style={{ cursor: 'pointer', border: '1px solid var(--color-accent)', background: 'transparent', transition: 'all 0.2s' }}
-                    >
-                      {showSwitch ? '✕ Close' : 'Join Different Team'}
-                    </button>
-                  ) : (
-                    <span className="badge" style={{ opacity: 0.6, border: '1px solid var(--color-border)' }}>Teams Locked</span>
-                  )}
-                  <span className="badge badge-teal">{teammates.length + 1} Members</span>
-                </div>
-              </div>
-
-              {showSwitch && (
-                <form onSubmit={handleSwitchTeam} className={styles.switchBox}>
-                  <p className={styles.switchLabel}>Join a different team using their code:</p>
-                  <div className={styles.switchInputGroup}>
-                    <input 
-                      type="text" 
-                      placeholder="ENTER CODE" 
-                      className="form-control"
-                      value={switchCode}
-                      onChange={e => setSwitchCode(e.target.value)}
-                      maxLength={6}
-                    />
-                    <button type="submit" className="btn btn-primary" disabled={switchLoading}>
-                      {switchLoading ? 'Joining...' : 'Join Team'}
-                    </button>
-                  </div>
-                  {switchError && <p className={styles.switchError}>{switchError}</p>}
-                  <p className={styles.switchNote}>Note: You will lose access to your current team's project submission.</p>
-                </form>
-              )}
-
-              <div className={styles.membersList}>
-                {/* Self */}
-                <div className={styles.memberRow}>
-                  <div className={styles.memberAvatar}>{participant?.full_name[0]}</div>
-                  <div className={styles.memberInfo}>
-                    <span className={styles.memberName}>{participant?.full_name} <span className="badge badge-cyan" style={{ fontSize: '0.6rem' }}>You</span></span>
-                    <span className={styles.memberMeta}>{participant?.grade} · {participant?.email}</span>
-                  </div>
-                  {participant?.is_team_leader && <span className="badge badge-teal">Leader</span>}
-                </div>
-                {/* Teammates */}
-                {teammates.map((t) => (
-                  <div key={t.id} className={styles.memberRow}>
-                    <div className={styles.memberAvatar}>{t.full_name[0]}</div>
-                    <div className={styles.memberInfo}>
-                      <span className={styles.memberName}>{t.full_name}</span>
-                      <span className={styles.memberMeta}>{t.grade} · {t.email}</span>
-                    </div>
-                    {t.is_team_leader && <span className="badge badge-teal">Leader</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Submission Status */}
-            <div className={`card ${styles.sectionCard}`}>
-              <div className="flex-between" style={{ marginBottom: 'var(--space-3)' }}>
-                <h3 className={styles.cardTitle}>Project Submission</h3>
-                <span className={`badge ${submission ? 'badge-success' : 'badge-warning'}`}>
-                  {submission ? '✓ Submitted' : 'Not Submitted'}
-                </span>
-              </div>
-
-              {submission ? (
-                <div className={styles.submissionPreview}>
-                  <h4 className={styles.submissionName}>{submission.project_name}</h4>
-                  <p className={styles.submissionDesc}>{submission.description.substring(0, 150)}...</p>
-                  <div className={styles.submissionLinks}>
-                    {submission.github_url && (
-                      <a href={submission.github_url} target="_blank" className={styles.linkChip}>
-                        GitHub Repository ↗
-                      </a>
-                    )}
-                    {submission.drive_url && (
-                      <a href={submission.drive_url} target="_blank" className={styles.linkChip}>
-                        Drive Link ↗
-                      </a>
-                    )}
-                    {submission.demo_url && (
-                      <a href={submission.demo_url} target="_blank" className={styles.linkChip}>
-                        Demo Video ↗
-                      </a>
-                    )}
-                  </div>
-                  <Link href="/dashboard/submit" className="btn btn-outline btn-sm">
-                    Edit Submission
-                  </Link>
-                </div>
+            <div className="relative overflow-hidden rounded-lg border-2 border-brand/30 bg-base">
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="Your QR Code" width={240} height={240} className="block h-60 w-60" />
               ) : (
-                <div className={styles.noSubmission}>
-                  <p>Your team hasn{"'"}t submitted a project yet. Submissions open during the hackathon.</p>
-                  <Link href="/dashboard/submit" className="btn btn-primary">
-                    Submit Project →
-                  </Link>
+                <div className="flex h-60 w-60 items-center justify-center">
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />
                 </div>
               )}
             </div>
+            <div className="w-full">
+              <p className="font-display text-base font-bold text-ink">{participant?.full_name}</p>
+              <p className="text-sm text-brand">{team?.team_name}</p>
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-ink-dim">{participant?.grade}</p>
+            </div>
+            <button onClick={downloadQR} disabled={!qrDataUrl} className={`${outlineBtn} w-full`}>Download QR Code</button>
+            <p className="text-xs text-ink-dim">Use this QR code for check-in, food collection, and event access.</p>
+          </div>
 
-            {/* Hackathon Info */}
-            <div className={`card ${styles.sectionCard} ${styles.infoCard}`}>
-              <h3 className={styles.cardTitle}>Quick Info</h3>
-              <div className={styles.infoGrid}>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Team Code</span>
-                  <span className={styles.infoCode}>{team?.team_code}</span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Event Dates</span>
-                  <span>July 31 – August 1, 2026</span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Check-in Time</span>
-                  <span>8:00 AM, July 31</span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Submission Deadline</span>
-                  <span>12:00 PM, August 1</span>
-                </div>
+          {/* Nav */}
+          <div className={`${card} flex flex-col gap-1 p-3`}>
+            {[
+              { href: '/dashboard', label: 'Dashboard', active: true },
+              { href: '/dashboard/submit', label: 'Submit Project' },
+              { href: '/dashboard/side-quests', label: 'Side Quests' },
+              { href: '/leaderboard', label: 'Leaderboard' },
+            ].map((l) => (
+              <Link key={l.href} href={l.href}
+                className={`rounded-lg px-4 py-2.5 font-mono text-[0.72rem] uppercase tracking-[0.12em] transition-colors ${
+                  l.active ? 'border-l-2 border-brand bg-brand/10 text-brand' : 'text-ink-sub hover:bg-panel hover:text-ink'
+                }`}>
+                {l.label}
+              </Link>
+            ))}
+            <button onClick={handleSignOut} className="rounded-lg px-4 py-2.5 text-left font-mono text-[0.72rem] uppercase tracking-[0.12em] text-bad/80 transition-colors hover:bg-bad/10 hover:text-bad">Sign Out</button>
+          </div>
+        </aside>
+
+        {/* Main */}
+        <main className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">
+                Hey, <span className="text-brand">{participant?.full_name.split(' ')[0]}</span>!
+              </h1>
+              <p className="text-sm text-ink-sub">Welcome to the GIIS Hackathon 2K26 participant portal</p>
+            </div>
+            <span className="rounded-full bg-brand/10 px-3 py-1 font-mono text-[0.6rem] font-bold uppercase text-brand">Jul 31 – Aug 1</span>
+          </div>
+
+          {/* Status */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {statTile('Team', team?.team_name || '—')}
+            {statTile('Members', `${teammates.length + 1} / 4`)}
+            {statTile('Check-in', participant?.checked_in ? 'Done' : 'Pending', participant?.checked_in ? 'text-good' : 'text-warn')}
+            {statTile('Submission', submission ? 'Submitted' : 'Not yet', submission ? 'text-good' : 'text-warn')}
+          </div>
+
+          {/* Rank */}
+          {myRank && (
+            <div className={card}>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="font-display text-base font-bold text-ink">Your Standing</h2>
+                <Link href="/leaderboard" className="font-mono text-[0.64rem] uppercase tracking-[0.12em] text-brand hover:underline">View Leaderboard →</Link>
+              </div>
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                {statTile('Rank', `#${myRank.rank}`, 'text-brand')}
+                {statTile('Total Score', myRank.total_score.toFixed(1), 'text-brand')}
+                {statTile('Side Quest Pts', String(myRank.side_quest_points))}
+                {statTile('Pool', `${myRank.pool === 'game_dev' ? 'Game Dev' : 'App/Web'} · ${myRank.category}`)}
               </div>
             </div>
-          </main>
-        </div>
+          )}
+
+          {/* Team members */}
+          <div className={card}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-base font-bold text-ink">Team Members</h2>
+              <div className="flex items-center gap-2">
+                {teamSwitchingEnabled ? (
+                  <button onClick={() => setShowSwitch(!showSwitch)}
+                    className={`rounded-full border px-3 py-1 font-mono text-[0.58rem] font-bold uppercase transition-colors ${showSwitch ? 'border-bad/50 text-bad' : 'border-brand/50 text-brand hover:bg-brand/5'}`}>
+                    {showSwitch ? '✕ Close' : 'Join Different Team'}
+                  </button>
+                ) : (
+                  <span className="rounded-full border border-line px-3 py-1 font-mono text-[0.58rem] uppercase text-ink-dim">Teams Locked</span>
+                )}
+                <span className="rounded-full bg-brand/10 px-3 py-1 font-mono text-[0.58rem] font-bold uppercase text-brand">{teammates.length + 1} Members</span>
+              </div>
+            </div>
+
+            {showSwitch && (
+              <form onSubmit={handleSwitchTeam} className="mb-4 flex flex-col gap-2 rounded-lg border border-dashed border-brand/30 bg-brand/[0.04] p-4">
+                <p className="text-sm font-medium text-ink">Join a different team using their code:</p>
+                <div className="flex gap-2">
+                  <input type="text" maxLength={6} placeholder="ENTER CODE" value={switchCode} onChange={(e) => setSwitchCode(e.target.value)}
+                    className={`${inputCls} uppercase tracking-[0.2em]`} />
+                  <button type="submit" disabled={switchLoading} className={`${primaryBtn} shrink-0 px-5`}>{switchLoading ? 'Joining…' : 'Join'}</button>
+                </div>
+                {switchError && <p className="text-sm text-bad">{switchError}</p>}
+                <p className="text-xs italic text-ink-dim">Note: you&apos;ll lose access to your current team&apos;s project submission.</p>
+              </form>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3 rounded-lg border border-line-soft bg-base/40 px-3 py-2.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-deep to-brand font-display font-black text-base">{participant?.full_name[0]}</span>
+                <div className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2 text-sm font-medium text-ink">
+                    {participant?.full_name} <span className="rounded-full bg-brand-blue/15 px-2 py-0.5 font-mono text-[0.5rem] uppercase text-brand-blue">You</span>
+                  </span>
+                  <span className="truncate text-xs text-ink-dim">{participant?.grade} · {participant?.email}</span>
+                </div>
+                {participant?.is_team_leader && <span className="rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.55rem] font-bold uppercase text-brand">Leader</span>}
+              </div>
+              {teammates.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 rounded-lg border border-line-soft bg-base/40 px-3 py-2.5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-deep to-brand font-display font-black text-base">{t.full_name[0]}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-ink">{t.full_name}</span>
+                    <span className="truncate text-xs text-ink-dim">{t.grade} · {t.email}</span>
+                  </div>
+                  {t.is_team_leader && <span className="rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.55rem] font-bold uppercase text-brand">Leader</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Submission */}
+          <div className={card}>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="font-display text-base font-bold text-ink">Project Submission</h2>
+              <span className={`rounded-full px-3 py-1 font-mono text-[0.58rem] font-bold uppercase ${submission ? 'bg-good/15 text-good' : 'bg-warn/15 text-warn'}`}>
+                {submission ? '✓ Submitted' : 'Not Submitted'}
+              </span>
+            </div>
+            {submission ? (
+              <div className="flex flex-col gap-3">
+                <h3 className="font-display text-lg font-bold text-brand-blue">{submission.project_name}</h3>
+                <p className="text-sm text-ink-sub">{submission.description.substring(0, 150)}…</p>
+                <div className="flex flex-wrap gap-2">
+                  {submission.github_url && <a href={submission.github_url} target="_blank" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">GitHub ↗</a>}
+                  {submission.drive_url && <a href={submission.drive_url} target="_blank" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">Drive ↗</a>}
+                  {submission.demo_url && <a href={submission.demo_url} target="_blank" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">Demo ↗</a>}
+                </div>
+                <Link href="/dashboard/submit" className={`${outlineBtn} w-fit px-5`}>Edit Submission</Link>
+              </div>
+            ) : (
+              <div className="flex flex-col items-start gap-3">
+                <p className="text-sm text-ink-sub">Your team hasn&apos;t submitted a project yet. Submissions open during the hackathon.</p>
+                <Link href="/dashboard/submit" className={`${primaryBtn} px-6`}>Submit Project →</Link>
+              </div>
+            )}
+          </div>
+
+          {/* Quick info */}
+          <div className={card}>
+            <h2 className="mb-3 font-display text-base font-bold text-ink">Quick Info</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <div className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-ink-dim">Team Code</div>
+                <div className="mt-1 inline-block rounded bg-brand/10 px-2.5 py-1 font-mono text-lg font-bold tracking-[0.2em] text-brand">{team?.team_code}</div>
+              </div>
+              {[
+                ['Event Dates', 'July 31 – August 1, 2026'],
+                ['Check-in Time', '8:00 AM, July 31'],
+                ['Submission Deadline', '12:00 PM, August 1'],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-ink-dim">{k}</div>
+                  <div className="mt-1 text-sm text-ink">{v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
       </div>
-    </>
+    </div>
   )
 }

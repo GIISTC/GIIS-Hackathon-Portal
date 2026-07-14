@@ -62,8 +62,7 @@ function ResetPasswordForm() {
         <Navbar />
         <div style={{ padding: 'var(--space-4)' }}>
           <div className="card" style={cardStyle}>
-            <div style={{ textAlign: 'center', fontSize: '3rem', marginBottom: 'var(--space-3)' }}>✅</div>
-            <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-2)' }}>Password Updated!</h2>
+            <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-2)' }}>Password Updated</h2>
             <p style={{ textAlign: 'center', color: 'var(--color-text-dim)' }}>
               Your password has been changed successfully. Redirecting to login...
             </p>
@@ -98,7 +97,6 @@ function ResetPasswordForm() {
       <Navbar />
       <div style={{ padding: 'var(--space-4)' }}>
         <div className="card" style={cardStyle}>
-          <div style={{ textAlign: 'center', fontSize: '2.5rem', marginBottom: 'var(--space-2)' }}>🔑</div>
           <h2 style={{ textAlign: 'center', marginBottom: 4 }}>Set New Password</h2>
           <p style={{ textAlign: 'center', color: 'var(--color-text-dim)', marginBottom: 'var(--space-4)', fontSize: '0.9rem' }}>
             Choose a strong password for your account.
@@ -135,7 +133,6 @@ function ResetPasswordForm() {
 
             {error && (
               <div className="alert alert-error" style={{ marginBottom: 'var(--space-3)' }}>
-                <span>⚠️</span>
                 <span>{error}</span>
               </div>
             )}
@@ -145,7 +142,7 @@ function ResetPasswordForm() {
               className={`btn btn-primary btn-full ${loading ? 'btn-loading' : ''}`}
               disabled={loading}
             >
-              {loading ? 'Updating...' : '✅ Update Password'}
+              {loading ? 'Updating...' : 'Update Password'}
             </button>
           </form>
         </div>

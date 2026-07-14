@@ -1,7 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ─── CSS Variables & Theme ─────────────────────────────────── */
 :root {
+  /* Font families for the Tailwind theme (Direction B — refined cyberpunk) */
+  --font-display: 'Orbitron';
+  --font-mono: 'JetBrains Mono';
+  --font-body: 'Rajdhani';
+
   /* Core Colors */
   --color-bg-base:    #030d1a;
   --color-bg-alt:     #04304C;
@@ -75,7 +84,10 @@ body {
 }
 
 a { text-decoration: none; color: inherit; }
-button { font-family: inherit; cursor: pointer; }
+/* Tailwind Preflight is disabled (to protect the CSS-module pages), so bare
+   <button>s would keep their OS chrome. Reset it here; class-styled buttons
+   (.btn, module classes) outrank this element selector and are unaffected. */
+button { font-family: inherit; cursor: pointer; background: transparent; border: none; color: inherit; }
 input, textarea, select { font-family: inherit; }
 img { max-width: 100%; }
 

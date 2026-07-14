@@ -2,388 +2,370 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import Navbar from '@/components/Navbar'
-import styles from './page.module.css'
 
 const CountdownTimer = nextDynamic(() => import('@/components/CountdownTimer'), { ssr: false })
 const HeroCanvas = nextDynamic(() => import('@/components/HeroCanvas'), { ssr: false })
-const ScrollReveal = nextDynamic(() => import('@/components/ScrollReveal'), { ssr: false })
 
 export const dynamic = 'force-dynamic'
 
+const TRACKS = [
+  { tag: 'Track 01', name: 'App Dev', tool: 'MIT App Inventor / Kodular', desc: 'Build a mobile app. External libraries allowed; AI assistance permitted but must be disclosed.' },
+  { tag: 'Track 02', name: 'Web Dev', tool: 'Any Framework / Vanilla', desc: 'Build a web app or site using any framework or plain HTML/CSS/JS. Open-source libraries are fair game.' },
+  { tag: 'Track 03', name: 'Game Dev', tool: 'Scratch Only', desc: 'Build a game in Scratch. Scratch extensions only — no external code libraries.' },
+]
+
+const PROBLEMS = [
+  { no: '01', name: 'Good Health & Well-Being', desc: 'Build a solution that improves access to, awareness of, or tracking of mental or physical health.' },
+  { no: '02', name: 'Quality Education & Productivity', desc: 'Build a solution that improves daily life in urban or school environments.' },
+  { no: '03', name: 'Climate Action', desc: 'Build a solution that helps users understand, reduce, or respond to their environmental impact.' },
+]
+
+const CRITERIA = [
+  { name: 'Relevance to Challenge Topic', max: 30 },
+  { name: 'Creativity & Originality', max: 25 },
+  { name: 'Functionality', max: 25 },
+  { name: 'User Experience / Playability', max: 20 },
+  { name: 'Presentation & Demo', max: 20 },
+  { name: 'Code / Design Quality', max: 15 },
+  { name: 'Completeness', max: 15 },
+]
+
+const SIDE_QUESTS = [
+  { name: 'Output Prediction', pts: 10 },
+  { name: 'Fix My README', pts: 10 },
+  { name: 'Logo Drop', pts: 5 },
+  { name: 'First User', pts: 10 },
+  { name: 'Version Control', pts: 15 },
+]
+
+const STEPS = [
+  { n: '01', title: 'Register', desc: 'Sign up your team of 2–4. Each member gets a unique QR code for event access.' },
+  { n: '02', title: 'Build', desc: 'Pick a problem statement and start hacking. 48 hours of coding, designing, creating.' },
+  { n: '03', title: 'Submit', desc: 'Submit your project through the portal — GitHub repo, drive link, and a description.' },
+  { n: '04', title: 'Present', desc: 'Demo to the OT judges. Top teams on each leaderboard take home the glory.' },
+]
+
+const SCHEDULE = {
+  day1: [
+    { t: '08:00', e: 'Registration & Check-In' },
+    { t: '09:00', e: 'Opening Ceremony & Problem Release', hot: true },
+    { t: '10:00', e: 'Hacking Begins', hot: true },
+    { t: '13:00', e: 'Lunch Break' },
+    { t: '15:00', e: 'Mentor Sessions — Round 1' },
+    { t: '19:00', e: 'Dinner Break' },
+    { t: '22:00', e: 'Late Night Snacks & Music' },
+  ],
+  day2: [
+    { t: '08:00', e: 'Morning & Breakfast' },
+    { t: '10:00', e: 'Mentor Sessions — Round 2' },
+    { t: '12:00', e: 'Submissions Close', hot: true },
+    { t: '13:00', e: 'Judging Begins' },
+    { t: '15:00', e: 'Final Presentations / Demo Day', hot: true },
+    { t: '17:00', e: 'Awards Ceremony', hot: true },
+    { t: '18:00', e: 'Closing & Networking' },
+  ],
+}
+
+const FAQS = [
+  { q: 'Who can participate?', a: 'All GIIS students are welcome. Teams register together as a group of 2–4 members.' },
+  { q: 'Do I need to know how to code?', a: 'Teams can mix skills — coding, design, research, and presentation all contribute to a winning project.' },
+  { q: 'What do I need to bring?', a: 'Your laptop, charger, ideas, and your team. Carry your QR code for check-in and food collection.' },
+  { q: 'What can we build?', a: 'Pick a track — App Dev (App Inventor / Kodular), Web Dev (any framework or vanilla), or Game Dev (Scratch only) — and tackle one of the three problem statements above.' },
+  { q: 'How is judging done?', a: 'Each project is scored by multiple OT judges across the 7 criteria above, then averaged into a live leaderboard. Side Quests add extra points on top.' },
+  { q: 'Is food provided?', a: 'Yes — meals and snacks throughout the event. Use your QR code for food collection.' },
+]
+
+const eyebrow = 'mb-3 font-mono text-[0.7rem] uppercase tracking-[0.28em] text-brand'
+const h2 = 'font-display text-3xl font-bold text-ink sm:text-4xl [text-wrap:balance]'
+const card = 'rounded-card border border-line bg-panel/70 p-6'
+
 export default function HomePage({ searchParams }: { searchParams?: { code?: string } }) {
-  // Supabase sends password-reset links to the Site URL root (e.g. /?code=xxx)
-  // Catch that here and forward to the real callback handler.
+  // Supabase sends password-reset links to the site root (/?code=xxx).
+  // Forward to the real callback handler.
   if (searchParams?.code) {
     redirect(`/auth/callback?code=${searchParams.code}&next=/auth/reset-password`)
   }
 
   return (
-    <>
+    <div className="min-h-screen bg-base font-body text-ink">
       <Navbar />
-      <ScrollReveal />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className={styles.hero}>
+      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-28 text-center">
         <HeroCanvas />
-        <div className={styles.heroContent}>
-          <div className="tag-pill animate-fadeInUp" style={{ animationDelay: '0.1s' }}>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-0"
+          style={{ background: 'radial-gradient(80% 50% at 50% 0%, rgba(47,230,200,0.08), transparent 60%)' }}
+        />
+        <div className="relative z-10 flex flex-col items-center">
+          <span className="mb-6 rounded-full border border-line bg-panel/60 px-4 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.2em] text-brand backdrop-blur">
             GIIS Tech Club Presents
-          </div>
-
-          <h1 className={`${styles.heroHeading} animate-glitch`}>
-            GIIS<br />
-            <span className="gradient-text">HACKATHON</span><br />
-            <span className={styles.heroYear}>2K26</span>
+          </span>
+          <h1 className="font-display text-5xl font-black leading-[0.95] tracking-tight text-ink sm:text-7xl">
+            GIIS<br />HACKATHON<br />
+            <span className="bg-gradient-to-b from-brand to-brand-deep bg-clip-text text-transparent">2K26</span>
           </h1>
-
-          <p className={`${styles.heroSubtext} animate-fadeInUp`} style={{ animationDelay: '0.3s' }}>
-            48 Hours. Unlimited Potential. One Stage.
+          <p className="mt-6 font-mono text-xs uppercase tracking-[0.3em] text-ink-sub sm:text-sm">
+            48 Hours · Unlimited Potential · One Stage
           </p>
-
-          <div className={`${styles.heroDates} animate-fadeInUp`} style={{ animationDelay: '0.4s' }}>
-            <span className={styles.dateChip}>July 31 – August 1, 2026</span>
-            <span className={styles.dateChip}>GIIS Smart Campus, Singapore</span>
-            <span className={styles.dateChip}>~400 Participants</span>
+          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+            {['July 31 – August 1, 2026', 'GIIS Smart Campus, Singapore'].map((c) => (
+              <span key={c} className="rounded-full border border-line bg-panel/50 px-4 py-1.5 font-mono text-[0.68rem] tracking-wide text-ink-sub">
+                {c}
+              </span>
+            ))}
           </div>
-
-          <div className={`${styles.heroButtons} animate-fadeInUp`} style={{ animationDelay: '0.5s' }}>
-            <Link href="/register" className="btn btn-primary btn-lg">
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
               Register Your Team →
             </Link>
-            <Link href="/#about" className="btn btn-outline btn-lg">
-              Learn More
+            <Link href="/leaderboard" className="rounded-lg border border-line px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
+              Live Leaderboard
             </Link>
           </div>
-        </div>
-
-        {/* Countdown */}
-        <div className={`${styles.countdownWrapper} animate-fadeInUp`} style={{ animationDelay: '0.7s' }}>
-          <p className="section-label" style={{ justifyContent: 'center' }}>Countdown to Hackathon</p>
-          <CountdownTimer targetDate="2026-07-31T08:00:00+08:00" />
+          <div className="mt-14 w-full">
+            <p className="mb-4 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-ink-dim">Countdown to Hackathon</p>
+            <CountdownTimer targetDate="2026-07-31T08:00:00+08:00" />
+          </div>
         </div>
       </section>
 
       {/* ── STATS ────────────────────────────────────────────── */}
-      <section className="section-sm">
-        <div className="container">
-          <div className={styles.statsGrid}>
-            {[
-              { number: '400+', label: 'Participants' },
-              { number: '48H',  label: 'Build Time' },
-              { number: '4',    label: 'Max Team Size' },
-              { number: '∞',    label: 'Possibilities' },
-            ].map((stat) => (
-              <div key={stat.label} className={`card card-hover ${styles.statCard} reveal`}>
-                <div className={styles.statNumber}>{stat.number}</div>
-                <div className={styles.statLabel}>{stat.label}</div>
-              </div>
-            ))}
-          </div>
+      <section className="relative z-10 mx-auto max-w-5xl px-4 py-12">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { n: '48H', l: 'Build Time' },
+            { n: '4', l: 'Leaderboards' },
+            { n: '3', l: 'Tracks' },
+            { n: '150', l: 'Max Points' },
+          ].map((s) => (
+            <div key={s.l} className="rounded-card border border-line bg-panel/70 px-4 py-6 text-center">
+              <div className="font-display text-3xl font-black text-brand sm:text-4xl">{s.n}</div>
+              <div className="mt-1 font-mono text-[0.6rem] uppercase tracking-[0.16em] text-ink-dim">{s.l}</div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ── ABOUT ────────────────────────────────────────────── */}
-      <section className="section" id="about">
-        <div className="container">
-          <div className={styles.aboutGrid}>
-            <div className={styles.aboutText}>
-              <p className="section-label">About the Event</p>
-              <h2>What is<br /><span className="gradient-text">GIIS Hackathon?</span></h2>
-              <p>
-                GIIS Hackathon 2K26 is the flagship innovation event hosted by the GIIS Tech Club.
-                Over 48 intense hours, participants collaborate in teams to ideate, design, and build
-                tech solutions to real-world problems.
-              </p>
-              <p>
-                Whether you{"'"}re a coder, designer, or problem-solver — there{"'"}s a place for you here.
-                Compete, create, and connect with the brightest minds at GIIS.
-              </p>
-              <div className={styles.aboutHighlights}>
-                {[
-                  'Real-world problem statements',
-                  'Exciting prizes across tracks',
-                  'Mentorship from industry experts',
-                  'Demo day pitches & judging',
-                ].map((text) => (
-                  <div key={text} className={styles.highlightItem}>
-                    <span className={styles.highlightArrow}>→</span>
-                    <span>{text}</span>
-                  </div>
-                ))}
-              </div>
+      <section id="about" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <div className="grid items-center gap-10 md:grid-cols-2">
+          <div>
+            <p className={eyebrow}>// About the Event</p>
+            <h2 className={h2}>What is GIIS Hackathon?</h2>
+            <p className="mt-4 leading-relaxed text-ink-sub">
+              The flagship innovation event of the GIIS Tech Club. Over 48 intense hours, teams
+              ideate, design, and build real tech solutions to real-world problems.
+            </p>
+            <p className="mt-3 leading-relaxed text-ink-sub">
+              Coder, designer, or problem-solver — there&apos;s a place for you. Compete, create, and
+              connect with the sharpest minds at GIIS.
+            </p>
+            <div className="mt-6 flex flex-col gap-2.5">
+              {['Real-world problem statements', 'Points-based judging across 4 leaderboards', 'Side Quests for bonus points', 'Demo day pitches & awards'].map((t) => (
+                <div key={t} className="flex items-center gap-3 rounded-lg border border-line bg-panel/50 px-4 py-2.5 text-sm text-ink-sub">
+                  <span className="text-brand">→</span>{t}
+                </div>
+              ))}
             </div>
-            <div className={styles.aboutVisual}>
-              <div className={styles.glowOrb} />
-              <div className={`card ${styles.aboutCard}`}>
-                <div className={styles.aboutCardItem}>
-                  <span className={styles.aboutCardLabel}>Date</span>
-                  <span>July 31 – August 1, 2026</span>
-                </div>
-                <div className={styles.aboutCardDivider} />
-                <div className={styles.aboutCardItem}>
-                  <span className={styles.aboutCardLabel}>Venue</span>
-                  <span>GIIS Smart Campus, Singapore</span>
-                </div>
-                <div className={styles.aboutCardDivider} />
-                <div className={styles.aboutCardItem}>
-                  <span className={styles.aboutCardLabel}>Team Size</span>
-                  <span>2 – 4 Members</span>
-                </div>
-                <div className={styles.aboutCardDivider} />
-                <div className={styles.aboutCardItem}>
-                  <span className={styles.aboutCardLabel}>Registration</span>
-                  <span className="text-accent">Open Now →</span>
-                </div>
-                <div className={styles.aboutCardDivider} />
-                <div className={styles.aboutCardItem}>
-                  <span className={styles.aboutCardLabel}>Problem Statements</span>
-                  <span>Released closer to the event</span>
-                </div>
-                <div className={styles.aboutCardDivider} />
-                <div className={styles.aboutCardItem}>
-                  <span className={styles.aboutCardLabel}>Prizes</span>
-                  <span>Coming soon</span>
-                </div>
+          </div>
+          <div className={card}>
+            {[
+              ['Date', 'July 31 – August 1, 2026'],
+              ['Venue', 'GIIS Smart Campus, Singapore'],
+              ['Team Size', '2 – 4 Members'],
+              ['Registration', 'Open Now →'],
+              ['Problem Statements', 'Released at the opening ceremony'],
+            ].map(([k, v], i, arr) => (
+              <div key={k} className={`flex items-center justify-between py-3.5 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
+                <span className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-brand">{k}</span>
+                <span className="text-sm font-medium text-ink">{v}</span>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* ── SCHEDULE ─────────────────────────────────────────── */}
-      <section className="section" id="schedule">
-        <div className="container">
-          <p className="section-label">Event Schedule</p>
-          <h2>The <span className="gradient-text">48-Hour</span> Journey</h2>
-
-          <div className={styles.scheduleGrid}>
-            {/* Day 1 */}
-            <div>
-              <h3 className={styles.dayHeading}>
-                <span className="badge badge-teal">Day 1</span>
-                July 31, 2026
-              </h3>
-              <div className={styles.timeline}>
-                {[
-                  { time: '08:00', event: 'Registration & Check-In',           type: 'start' },
-                  { time: '09:00', event: 'Opening Ceremony & Problem Release', type: '' },
-                  { time: '10:00', event: 'Hacking Begins',                     type: 'highlight' },
-                  { time: '13:00', event: 'Lunch Break',                        type: '' },
-                  { time: '15:00', event: 'Mentor Sessions — Round 1',          type: '' },
-                  { time: '19:00', event: 'Dinner Break',                       type: '' },
-                  { time: '22:00', event: 'Late Night Snacks & Music',          type: '' },
-                ].map((item) => (
-                  <div key={item.time} className={`${styles.timelineItem} ${item.type === 'highlight' ? styles.timelineHighlight : ''}`}>
-                    <div className={styles.timelineTime}>{item.time}</div>
-                    <div className={styles.timelineDot} />
-                    <div className={styles.timelineContent}>
-                      <span>{item.event}</span>
-                    </div>
+      <section id="schedule" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// Event Schedule</p>
+        <h2 className={h2}>The 48-Hour Journey</h2>
+        <div className="mt-8 grid gap-8 md:grid-cols-2">
+          {([['Day 1 · July 31', SCHEDULE.day1], ['Day 2 · August 1', SCHEDULE.day2]] as const).map(([label, items]) => (
+            <div key={label}>
+              <h3 className="mb-4 font-display text-lg font-bold text-brand">{label}</h3>
+              <div className="flex flex-col">
+                {items.map((it) => (
+                  <div key={it.t} className="flex items-center gap-4 border-b border-line-soft py-3 last:border-0">
+                    <span className="w-14 shrink-0 font-mono text-sm text-ink-dim [font-variant-numeric:tabular-nums]">{it.t}</span>
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${it.hot ? 'bg-brand shadow-glow' : 'bg-line'}`} />
+                    <span className={`text-sm ${it.hot ? 'font-medium text-brand' : 'text-ink-sub'}`}>{it.e}</span>
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Day 2 */}
-            <div>
-              <h3 className={styles.dayHeading}>
-                <span className="badge badge-cyan">Day 2</span>
-                August 1, 2026
-              </h3>
-              <div className={styles.timeline}>
-                {[
-                  { time: '08:00', event: 'Morning & Breakfast',                type: '' },
-                  { time: '10:00', event: 'Mentor Sessions — Round 2',          type: '' },
-                  { time: '12:00', event: 'Submissions Close',                  type: 'highlight' },
-                  { time: '13:00', event: 'Lunch & Project Judging Begins',     type: '' },
-                  { time: '15:00', event: 'Final Presentations / Demo Day',     type: 'highlight' },
-                  { time: '17:00', event: 'Awards Ceremony',                    type: 'highlight' },
-                  { time: '18:00', event: 'Closing & Networking',               type: '' },
-                ].map((item) => (
-                  <div key={item.time} className={`${styles.timelineItem} ${item.type === 'highlight' ? styles.timelineHighlight : ''}`}>
-                    <div className={styles.timelineTime}>{item.time}</div>
-                    <div className={styles.timelineDot} />
-                    <div className={styles.timelineContent}>
-                      <span>{item.event}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       {/* ── TRACKS ───────────────────────────────────────────── */}
-      <section className="section" id="tracks">
-        <div className="container">
-          <p className="section-label">Competition Tracks</p>
-          <h2>Choose Your <span className="gradient-text">Track</span></h2>
-          <p style={{ marginBottom: 'var(--space-6)', maxWidth: '600px' }}>
-            Problem statements and detailed tracks will be released closer to the event date.
-            Stay tuned and start preparing your skills!
-          </p>
+      <section id="tracks" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// Competition Tracks</p>
+        <h2 className={h2}>Choose Your Track</h2>
+        <p className="mt-3 max-w-xl text-ink-sub">Pick the track that fits your team. Each has its own permitted tools.</p>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {TRACKS.map((t) => (
+            <div key={t.name} className={`${card} transition-colors hover:border-brand/40`}>
+              <div className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-ink-dim">{t.tag}</div>
+              <h3 className="mt-2 font-display text-xl font-bold text-ink">{t.name}</h3>
+              <span className="mt-2 inline-block rounded-full bg-brand/10 px-3 py-1 font-mono text-[0.6rem] uppercase tracking-wide text-brand">{t.tool}</span>
+              <p className="mt-3 text-sm leading-relaxed text-ink-sub">{t.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 flex items-start gap-3 rounded-card border border-brand/25 bg-brand/[0.06] px-5 py-4 text-sm text-ink-sub">
+          <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+          <span>
+            App Dev &amp; Web Dev teams compete together on one leaderboard; Game Dev has its own. Each pool splits
+            into <strong className="text-ink">Junior</strong> (Grades 6–8) and <strong className="text-ink">Senior</strong> (Grades 9–12)
+            by the team&apos;s oldest member. See the full{' '}
+            <Link href="/leaderboard" className="text-brand underline">Leaderboard →</Link>
+          </span>
+        </div>
+      </section>
 
-          <div className="grid-3">
-            {[
-              {
-                num: '01',
-                title: 'Track 1',
-                subtitle: 'Coming Soon',
-                desc: 'Problem statement to be released closer to the event. Start sharpening your skills!',
-                color: 'var(--color-accent)',
-              },
-              {
-                num: '02',
-                title: 'Track 2',
-                subtitle: 'Coming Soon',
-                desc: 'Problem statement to be released closer to the event. Think big, build bigger.',
-                color: 'var(--color-accent-3)',
-              },
-              {
-                num: '03',
-                title: 'Track 3',
-                subtitle: 'Coming Soon',
-                desc: 'Problem statement to be released closer to the event. Innovation awaits.',
-                color: 'var(--color-accent-2)',
-              },
-            ].map((track) => (
-              <div key={track.title} className={`card card-hover reveal ${styles.trackCard}`}>
-                <div className={styles.trackNum} style={{ color: track.color }}>{track.num}</div>
-                <h3 className={styles.trackTitle}>{track.title}</h3>
-                <span className="badge badge-teal" style={{ marginBottom: '12px' }}>{track.subtitle}</span>
-                <p style={{ fontSize: '0.95rem' }}>{track.desc}</p>
-              </div>
-            ))}
+      {/* ── PROBLEM STATEMENTS ───────────────────────────────── */}
+      <section id="problems" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// Pick a Challenge</p>
+        <h2 className={h2}>Problem Statements</h2>
+        <p className="mt-3 max-w-xl text-ink-sub">Every team picks one of these three challenges — any track can tackle any challenge.</p>
+        <div className="mt-8 grid gap-4 md:grid-cols-3">
+          {PROBLEMS.map((p) => (
+            <div key={p.name} className={`${card} transition-colors hover:border-brand/40`}>
+              <div className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-brand">Challenge {p.no}</div>
+              <h3 className="mt-2 font-display text-base font-bold text-ink">{p.name}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-sub">{p.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── JUDGING CRITERIA ─────────────────────────────────── */}
+      <section id="judging" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// How You&apos;re Scored</p>
+        <h2 className={h2}>Judging Criteria</h2>
+        <p className="mt-3 max-w-xl text-ink-sub">
+          Scored by multiple OT judges across these categories, then averaged — 150 points total.
+        </p>
+        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {CRITERIA.map((c) => (
+            <div key={c.name} className="flex flex-col justify-between rounded-card border border-line bg-panel/70 p-4">
+              <div className="text-sm font-medium text-ink">{c.name}</div>
+              <span className="mt-3 inline-block w-fit rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.6rem] uppercase tracking-wide text-brand">Max {c.max} pts</span>
+            </div>
+          ))}
+          <div className="flex flex-col justify-center rounded-card border border-dashed border-line p-4 text-center">
+            <div className="font-display text-2xl font-black text-brand-blue">150</div>
+            <div className="mt-1 font-mono text-[0.58rem] uppercase tracking-wide text-ink-dim">Points Total</div>
           </div>
+        </div>
+      </section>
+
+      {/* ── SIDE QUESTS ──────────────────────────────────────── */}
+      <section id="side-quests" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// Extra Credit</p>
+        <h2 className={h2}>Side Quests</h2>
+        <p className="mt-3 max-w-xl text-ink-sub">
+          Bonus challenges released throughout the event — solve them for extra points on top of your project score.
+        </p>
+        <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {SIDE_QUESTS.map((q) => (
+            <div key={q.name} className="flex items-center justify-between rounded-card border border-line bg-panel/70 px-5 py-4">
+              <span className="font-medium text-ink">{q.name}</span>
+              <span className="rounded-full bg-brand-blue/10 px-3 py-1 font-mono text-[0.62rem] font-bold text-brand-blue">+{q.pts} pts</span>
+            </div>
+          ))}
+          <Link href="/register" className="flex items-center justify-center rounded-card border border-dashed border-brand/40 px-5 py-4 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-brand transition-colors hover:bg-brand/5">
+            Register to play →
+          </Link>
         </div>
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────────────── */}
-      <section className="section" id="how">
-        <div className="container">
-          <p className="section-label">// How It Works</p>
-          <h2>Your Path to <span className="gradient-text">Victory</span></h2>
-
-          <div className={styles.pathsSection}>
-            <p className={styles.pathsLead}>Choose one of 3 tracks:</p>
-            <div className={styles.pathsGrid}>
-              <div className={`card ${styles.pathCard}`}>
-                <div className={styles.pathLabel}>G</div>
-                <h3 className={styles.pathTitle}>Game Dev</h3>
-                <p className={styles.pathDesc}>Build immersive worlds. Create a game that tells a story or challenges the mind using any engine of your choice.</p>
-              </div>
-              <div className={`card ${styles.pathCard}`}>
-                <div className={styles.pathLabel}>A</div>
-                <h3 className={styles.pathTitle}>App Dev</h3>
-                <p className={styles.pathDesc}>Solve daily problems. Design and develop a mobile application that makes life easier or more connected.</p>
-              </div>
-              <div className={`card ${styles.pathCard}`}>
-                <div className={styles.pathLabel}>W</div>
-                <h3 className={styles.pathTitle}>Web Dev</h3>
-                <p className={styles.pathDesc}>Engineer the future of the web. Create a powerful web platform or tool that scales across the internet.</p>
-              </div>
+      <section id="how" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// How It Works</p>
+        <h2 className={h2}>Your Path to Victory</h2>
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {STEPS.map((s) => (
+            <div key={s.n} className={card}>
+              <span className="inline-block rounded-full bg-brand px-3 py-1 font-mono text-[0.62rem] font-bold tracking-[0.14em] text-base">{s.n}</span>
+              <h3 className="mt-3 font-display text-base font-bold text-brand">{s.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-sub">{s.desc}</p>
             </div>
-          </div>
-
-          <div className={styles.howGrid}>
-            {[
-              { step: '01', title: 'Register', desc: 'Sign up your team of 2–4 members. Each member gets a unique QR code for event access.' },
-              { step: '02', title: 'Build',    desc: 'Receive the problem statement and start hacking. 48 hours of coding, designing, and creating.' },
-              { step: '03', title: 'Submit',   desc: 'Submit your project via our portal — GitHub repo, drive links, and a description.' },
-              { step: '04', title: 'Present',  desc: 'Demo your project to our panel of judges. The best teams walk away with glory and prizes.' },
-            ].map((step, i) => (
-              <div key={step.step} className={`reveal ${styles.howStep}`} style={{ animationDelay: `${i * 0.1}s` }}>
-                <div className={styles.howStepNum}>{step.step}</div>
-                <h3 className={styles.howTitle}>{step.title}</h3>
-                <p style={{ fontSize: '0.95rem' }}>{step.desc}</p>
-                {i < 3 && <div className={styles.howArrow}>→</div>}
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────────── */}
-      <section className={`section ${styles.faqSection}`} id="faq">
-        <div className="container">
-          <p className="section-label">// FAQ</p>
-          <h2>Got <span className="gradient-text">Questions?</span></h2>
-
-          <div className={styles.faqGrid}>
-            {[
-              {
-                q: 'Who can participate?',
-                a: 'All GIIS students are welcome to participate. Teams must register together as a group of 2–4 members.',
-              },
-              {
-                q: 'Do I need to know how to code?',
-                a: 'Teams can have members with different skills — coding, design, research, and presentation skills all contribute to a winning project.',
-              },
-              {
-                q: 'What do I need to bring?',
-                a: 'Your laptop, charger, your ideas, and your team! All participants must carry their QR code for check-in and food collection.',
-              },
-              {
-                q: 'What can we build?',
-                a: 'You can build a web app, mobile app, or game. The problem statements will guide the direction.',
-              },
-              {
-                q: 'When are problem statements released?',
-                a: 'Problem statements will be released at the opening ceremony on July 31. Keep the details confidential until then!',
-              },
-              {
-                q: 'Is food provided?',
-                a: 'Yes! Meals and snacks are provided throughout the hackathon. Use your QR code for food collection.',
-              },
-            ].map((faq) => (
-              <div key={faq.q} className={`card reveal ${styles.faqCard}`}>
-                <h4 className={styles.faqQ}>{faq.q}</h4>
-                <p className={styles.faqA}>{faq.a}</p>
-              </div>
-            ))}
-          </div>
+      <section id="faq" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
+        <p className={eyebrow}>// FAQ</p>
+        <h2 className={h2}>Got Questions?</h2>
+        <div className="mt-8 grid gap-3 md:grid-cols-2">
+          {FAQS.map((f) => (
+            <div key={f.q} className={card}>
+              <h3 className="font-display text-sm font-bold text-brand">{f.q}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-ink-sub">{f.a}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────── */}
-      <section className={`section ${styles.ctaSection}`}>
-        <div className="container">
-          <div className={`card ${styles.ctaCard}`}>
-            <div className={styles.ctaGlow} />
-            <p className="section-label" style={{ justifyContent: 'center' }}>Ready to hack?</p>
-            <h2 className={styles.ctaHeading}>
-              Join the <span className="gradient-text">Revolution</span>
-            </h2>
-            <p className={styles.ctaSubtext}>
-              Register your team now before spots fill up. Limited to ~400 participants.
+      <section className="relative z-10 mx-auto max-w-4xl px-4 py-20">
+        <div className="relative overflow-hidden rounded-2xl border border-brand/25 bg-gradient-to-br from-brand/[0.12] via-panel to-panel p-10 text-center sm:p-14">
+          <div className="pointer-events-none absolute -top-16 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" />
+          <div className="relative">
+            <p className={`${eyebrow} inline-block`}>// Ready to hack?</p>
+            <h2 className="font-display text-3xl font-black text-ink sm:text-4xl">Join the Revolution</h2>
+            <p className="mx-auto mt-3 max-w-md text-ink-sub">
+              Register your team before spots fill up.
             </p>
-            <Link href="/register" className="btn btn-primary btn-lg animate-pulse-glow">
-              Register Your Team →
-            </Link>
+            <div className="mt-7 flex flex-wrap justify-center gap-3">
+              <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
+                Register Your Team →
+              </Link>
+              <Link href="/leaderboard" className="rounded-lg border border-line px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
+                View Leaderboard
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── FOOTER ───────────────────────────────────────────── */}
-      <footer className={styles.footer}>
-        <div className="container">
-          <div className={styles.footerInner}>
-            <div>
-              <div className={styles.footerLogo}>GIIS<span>HACK</span> 2K26</div>
-              <p className={styles.footerTagline}>Organized by GIIS Tech Club</p>
-            </div>
-            <div className={styles.footerLinks}>
-              <Link href="https://giistechclub.com" target="_blank">Tech Club Website</Link>
-              <Link href="mailto:techclub@giis.edu.sg">Contact Us</Link>
-              <Link href="/admin">Admin</Link>
-            </div>
+      <footer className="relative z-10 border-t border-line bg-base/80">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-5 px-4 py-10 text-center">
+          <div className="flex flex-col items-center gap-2">
+            <img src="/logo.png" alt="GIIS Hackathon" width={56} height={56} className="h-14 w-14 object-contain" />
+            <div className="font-display text-lg font-black tracking-wide text-ink">GIIS Hackathon <span className="text-brand">2K26</span></div>
+            <p className="text-sm text-ink-dim">Organized by GIIS Tech Club</p>
           </div>
-          <div className={styles.footerBottom}>
-            <p>© 2026 GIIS Tech Club. All rights reserved.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {[
+              { href: 'https://giistechclub.com', label: 'Tech Club' },
+              { href: 'mailto:techclub@giis.edu.sg', label: 'Contact' },
+              { href: '/leaderboard', label: 'Leaderboard' },
+              { href: '/admin', label: 'Admin' },
+            ].map((l) => (
+              <Link key={l.label} href={l.href} className="rounded-full border border-line px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-ink-sub transition-colors hover:border-brand/50 hover:text-brand">
+                {l.label}
+              </Link>
+            ))}
           </div>
+          <p className="border-t border-line pt-4 font-mono text-[0.62rem] text-ink-dim">© 2026 GIIS Tech Club. All rights reserved.</p>
         </div>
       </footer>
-    </>
+    </div>
   )
 }

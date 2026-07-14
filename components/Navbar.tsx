@@ -50,28 +50,28 @@ export default function Navbar() {
     window.location.href = '/'
   }
 
-  const linkCls = 'font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-sub transition-colors hover:text-brand'
-  const btnGhost = 'cursor-pointer border-0 bg-transparent font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-sub transition-colors hover:text-ink'
-  const btnOutline = 'rounded-lg border border-line bg-transparent px-4 py-2 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5'
-  const btnPrimary = 'rounded-lg border-0 bg-gradient-to-br from-brand to-brand-blue px-4 py-2 font-mono text-[0.7rem] font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90'
+  const linkCls = 'font-mono text-[0.83rem] uppercase tracking-[0.16em] text-ink-sub transition-colors hover:text-brand'
+  const btnGhost = 'cursor-pointer border-0 bg-transparent font-mono text-[0.83rem] uppercase tracking-[0.16em] text-ink-sub transition-colors hover:text-ink'
+  const btnOutline = 'rounded-lg border border-line bg-transparent px-5 py-2.5 font-mono text-[0.81rem] uppercase tracking-[0.16em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5'
+  const btnPrimary = 'rounded-lg border-0 bg-gradient-to-br from-brand to-brand-blue px-5 py-2.5 font-mono text-[0.81rem] font-bold uppercase tracking-[0.16em] text-base transition-opacity hover:opacity-90'
 
   return (
-    <nav className="fixed inset-x-0 top-3 z-50 mx-auto w-[min(96%,1200px)] font-body">
+    <nav className="fixed inset-x-0 top-3 z-50 mx-auto w-[min(96%,1300px)] font-body">
       <div
-        className={`flex items-center justify-between rounded-full border border-line px-5 py-2.5 backdrop-blur-xl transition-colors ${
+        className={`flex items-center justify-between rounded-full border border-line px-6 py-3.5 backdrop-blur-xl transition-colors ${
           scrolled ? 'bg-base/90 shadow-[0_8px_40px_rgba(0,0,0,0.5)]' : 'bg-base/70'
         }`}
       >
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <img src="/logo.png" alt="GIIS Hackathon" width={32} height={32} className="h-8 w-8 shrink-0 object-contain" />
-          <span className="font-display text-sm font-bold tracking-wide text-ink">
+        <Link href="/" className="flex items-center gap-3">
+          <img src="/logo.png" alt="GIIS Hackathon" width={37} height={37} className="h-[2.3rem] w-[2.3rem] shrink-0 object-contain" />
+          <span className="font-display text-base font-bold tracking-wide text-ink">
             GIIS Hackathon <span className="text-brand">2K26</span>
           </span>
         </Link>
 
         {/* Desktop links */}
-        <ul className="hidden items-center gap-6 lg:flex">
+        <ul className="hidden items-center gap-9 lg:flex">
           {NAV_LINKS.map(({ href, label }) => (
             <li key={href}>
               <Link href={href} className={linkCls}>{label}</Link>
@@ -80,7 +80,7 @@ export default function Navbar() {
         </ul>
 
         {/* Desktop actions */}
-        <div className="hidden items-center gap-3 lg:flex">
+        <div className="hidden items-center gap-4 lg:flex">
           {user ? (
             <>
               {isAdmin && <Link href="/admin" className={btnOutline}>Admin</Link>}

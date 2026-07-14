@@ -98,34 +98,34 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
           className="pointer-events-none absolute inset-0 z-0"
           style={{ background: 'radial-gradient(80% 50% at 50% 0%, rgba(47,230,200,0.08), transparent 60%)' }}
         />
-        <div className="relative z-10 flex flex-col items-center">
-          <span className="mb-6 rounded-full border border-line bg-panel/60 px-4 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.2em] text-brand backdrop-blur">
+        <div className="relative z-10 flex w-full max-w-6xl flex-col items-center">
+          <span className="mb-8 rounded-full border border-line bg-panel/60 px-5 py-2 font-mono text-sm uppercase tracking-[0.2em] text-brand backdrop-blur">
             GIIS Tech Club Presents
           </span>
-          <h1 className="font-display text-5xl font-black leading-[0.95] tracking-tight text-ink sm:text-7xl">
+          <h1 className="font-display text-[2.85rem] font-black leading-[0.92] tracking-tight text-ink sm:text-[5.7rem] lg:text-[8.55rem]">
             GIIS<br />HACKATHON<br />
             <span className="bg-gradient-to-b from-brand to-brand-deep bg-clip-text text-transparent">2K26</span>
           </h1>
-          <p className="mt-6 font-mono text-xs uppercase tracking-[0.3em] text-ink-sub sm:text-sm">
+          <p className="mt-8 font-mono text-base uppercase tracking-[0.3em] text-ink-sub sm:text-xl">
             48 Hours · Unlimited Potential · One Stage
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-2.5">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
             {['July 31 – August 1, 2026', 'GIIS Smart Campus, Singapore'].map((c) => (
-              <span key={c} className="rounded-full border border-line bg-panel/50 px-4 py-1.5 font-mono text-[0.68rem] tracking-wide text-ink-sub">
+              <span key={c} className="rounded-full border border-line bg-panel/50 px-5 py-2 font-mono text-sm tracking-wide text-ink-sub">
                 {c}
               </span>
             ))}
           </div>
-          <div className="mt-9 flex flex-wrap justify-center gap-3">
-            <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
+          <div className="mt-12 flex flex-wrap justify-center gap-4">
+            <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-10 py-5 font-mono text-base font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
               Register Your Team →
             </Link>
-            <Link href="/leaderboard" className="rounded-lg border border-line px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
+            <Link href="/leaderboard" className="rounded-lg border border-line px-10 py-5 font-mono text-base font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
               Live Leaderboard
             </Link>
           </div>
-          <div className="mt-14 w-full">
-            <p className="mb-4 font-mono text-[0.62rem] uppercase tracking-[0.24em] text-ink-dim">Countdown to Hackathon</p>
+          <div className="mt-16 w-full">
+            <p className="mb-5 font-mono text-sm uppercase tracking-[0.24em] text-ink-dim">Countdown to Hackathon</p>
             <CountdownTimer targetDate="2026-07-31T08:00:00+08:00" />
           </div>
         </div>

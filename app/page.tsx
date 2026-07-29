@@ -14,11 +14,8 @@ const TRACKS = [
   { tag: 'Track 03', name: 'Game Dev', tool: 'Scratch Only', desc: 'Build a game in Scratch. Scratch extensions only — no external code libraries.' },
 ]
 
-const PROBLEMS = [
-  { no: '01', name: 'Good Health & Well-Being', desc: 'Build a solution that improves access to, awareness of, or tracking of mental or physical health.' },
-  { no: '02', name: 'Quality Education & Productivity', desc: 'Build a solution that improves daily life in urban or school environments.' },
-  { no: '03', name: 'Climate Action', desc: 'Build a solution that helps users understand, reduce, or respond to their environmental impact.' },
-]
+// Kept secret until the opening ceremony — only the count is public.
+const PROBLEM_COUNT = 3
 
 const CRITERIA = [
   { name: 'Relevance to Challenge Topic', max: 30 },
@@ -30,13 +27,8 @@ const CRITERIA = [
   { name: 'Completeness', max: 15 },
 ]
 
-const SIDE_QUESTS = [
-  { name: 'Output Prediction', pts: 10 },
-  { name: 'Fix My README', pts: 10 },
-  { name: 'Logo Drop', pts: 5 },
-  { name: 'First User', pts: 10 },
-  { name: 'Version Control', pts: 15 },
-]
+// Kept secret until the event — only the count is public.
+const SIDE_QUEST_COUNT = 5
 
 const STEPS = [
   { n: '01', title: 'Register', desc: 'Sign up your team of 2–4. Each member gets a unique QR code for event access.' },
@@ -126,7 +118,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
           </div>
           <div className="mt-16 w-full">
             <p className="mb-5 font-mono text-sm uppercase tracking-[0.24em] text-ink-dim">Countdown to Hackathon</p>
-            <CountdownTimer targetDate="2026-07-31T08:00:00+08:00" />
+            <CountdownTimer targetDate="2026-07-31T14:30:00+08:00" />
           </div>
         </div>
       </section>
@@ -239,13 +231,15 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
       <section id="problems" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
         <p className={eyebrow}>// Pick a Challenge</p>
         <h2 className={h2}>Problem Statements</h2>
-        <p className="mt-3 max-w-xl text-ink-sub">Every team picks one of these three challenges — any track can tackle any challenge.</p>
+        <p className="mt-3 max-w-xl text-ink-sub">
+          Every team picks one of {PROBLEM_COUNT} challenges — kept secret until the opening ceremony. Any track can tackle any challenge.
+        </p>
         <div className="mt-8 grid gap-4 md:grid-cols-3">
-          {PROBLEMS.map((p) => (
-            <div key={p.name} className={`${card} transition-colors hover:border-brand/40`}>
-              <div className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-brand">Challenge {p.no}</div>
-              <h3 className="mt-2 font-display text-base font-bold text-ink">{p.name}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-ink-sub">{p.desc}</p>
+          {Array.from({ length: PROBLEM_COUNT }).map((_, i) => (
+            <div key={i} className={`${card} flex flex-col items-center gap-3 text-center transition-colors hover:border-brand/40`}>
+              <div className="font-mono text-[0.7rem] uppercase tracking-[0.2em] text-brand">Challenge {String(i + 1).padStart(2, '0')}</div>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full border border-dashed border-line font-display text-2xl text-ink-dim">?</div>
+              <p className="text-sm leading-relaxed text-ink-dim">Revealed at the Opening Ceremony</p>
             </div>
           ))}
         </div>
@@ -277,13 +271,14 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
         <p className={eyebrow}>// Extra Credit</p>
         <h2 className={h2}>Side Quests</h2>
         <p className="mt-3 max-w-xl text-ink-sub">
-          Bonus challenges released throughout the event — solve them for extra points on top of your project score.
+          {SIDE_QUEST_COUNT} bonus challenges, released throughout the event — solve one for extra points on top of your project score.
+          What they are stays secret until the day of.
         </p>
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SIDE_QUESTS.map((q) => (
-            <div key={q.name} className="flex items-center justify-between rounded-card border border-line bg-panel/70 px-5 py-4">
-              <span className="font-medium text-ink">{q.name}</span>
-              <span className="rounded-full bg-brand-blue/10 px-3 py-1 font-mono text-[0.62rem] font-bold text-brand-blue">+{q.pts} pts</span>
+          {Array.from({ length: SIDE_QUEST_COUNT }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between rounded-card border border-line bg-panel/70 px-5 py-4">
+              <span className="font-medium text-ink-dim">Side Quest {i + 1}</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-full border border-dashed border-line font-display text-sm text-ink-dim">?</span>
             </div>
           ))}
           <Link href="/register" className="flex items-center justify-center rounded-card border border-dashed border-brand/40 px-5 py-4 font-mono text-[0.7rem] uppercase tracking-[0.14em] text-brand transition-colors hover:bg-brand/5">
@@ -329,7 +324,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
             <p className={`${eyebrow} inline-block`}>// Ready to hack?</p>
             <h2 className="font-display text-3xl font-black text-ink sm:text-4xl">Join the Revolution</h2>
             <p className="mx-auto mt-3 max-w-md text-ink-sub">
-              Register your team before spots fill up.
+              Register for the Hackathon Today!
             </p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
               <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">

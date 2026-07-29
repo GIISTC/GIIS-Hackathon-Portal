@@ -60,7 +60,7 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
     return (
       <div className={styles.liveWrapper}>
         <span className={styles.liveDot} />
-        <span className={styles.liveText}>HACKATHON IS LIVE!</span>
+        <span className={styles.liveText}>Event is now live!</span>
       </div>
     )
   }

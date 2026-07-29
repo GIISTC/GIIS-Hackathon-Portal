@@ -26,6 +26,7 @@ export default function AdminTeamsPage() {
   const [teamNameDraft, setTeamNameDraft] = useState('')
   const [editingParticipantId, setEditingParticipantId] = useState<string | null>(null)
   const [participantDraft, setParticipantDraft] = useState({ full_name: '', grade: '' })
+  const [moveTarget, setMoveTarget] = useState<Record<string, string>>({})
 
   const loadTeams = async () => {
     const supabase = createClient()
@@ -113,7 +114,7 @@ export default function AdminTeamsPage() {
   }
 
   const removeParticipant = async (participantId: string, name: string) => {
-    if (!confirm(`Remove ${name} from the event entirely? This cannot be undone.`)) return
+    if (!confirm(`Delete ${name}'s registration entirely — including their account, so they could sign up again with the same email? This cannot be undone.`)) return
     setBusy(participantId)
     try {
       const res = await fetch(`/api/admin/participants/${participantId}`, { method: 'DELETE' })
@@ -121,6 +122,25 @@ export default function AdminTeamsPage() {
       await loadTeams()
     } catch (err: any) {
       alert(err.message || 'Failed to remove participant.')
+    }
+    setBusy(null)
+  }
+
+  const moveParticipant = async (participantId: string, name: string) => {
+    const targetTeamId = moveTarget[participantId]
+    if (!targetTeamId) return
+    const targetTeam = teams.find((t) => t.id === targetTeamId)
+    if (!confirm(`Move ${name} to "${targetTeam?.team_name}"?`)) return
+    setBusy(participantId)
+    try {
+      const res = await fetch(`/api/admin/participants/${participantId}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team_id: targetTeamId }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
+      setMoveTarget((prev) => ({ ...prev, [participantId]: '' }))
+      await loadTeams()
+    } catch (err: any) {
+      alert(err.message || 'Failed to move participant.')
     }
     setBusy(null)
   }
@@ -209,8 +229,18 @@ export default function AdminTeamsPage() {
                             </span>
                             <span className="truncate text-xs text-ink-dim">{p.grade} · {p.email}</span>
                           </div>
+                          <select className={selectCls} value={moveTarget[p.id] || ''} disabled={busy === p.id}
+                            onChange={(e) => setMoveTarget((prev) => ({ ...prev, [p.id]: e.target.value }))}>
+                            <option value="">Move to…</option>
+                            {teams.filter((ot) => ot.id !== t.id).map((ot) => (
+                              <option key={ot.id} value={ot.id} disabled={(ot.participants?.length || 0) >= MAX_TEAM_SIZE}>
+                                {ot.team_name} ({ot.participants?.length || 0}/{MAX_TEAM_SIZE}{(ot.participants?.length || 0) >= MAX_TEAM_SIZE ? ' · full' : ''})
+                              </option>
+                            ))}
+                          </select>
+                          <button onClick={() => moveParticipant(p.id, p.full_name)} disabled={busy === p.id || !moveTarget[p.id]} className={`${smBtn} border border-brand/40 text-brand hover:bg-brand/5`}>Move</button>
                           <button onClick={() => startEditParticipant(p)} className={`${smBtn} border border-line text-ink-sub hover:text-ink`}>Edit</button>
-                          <button onClick={() => removeParticipant(p.id, p.full_name)} disabled={busy === p.id} className={`${smBtn} border border-bad/40 text-bad hover:bg-bad/10`}>Remove</button>
+                          <button onClick={() => removeParticipant(p.id, p.full_name)} disabled={busy === p.id} className={`${smBtn} border border-bad/40 text-bad hover:bg-bad/10`}>Delete</button>
                         </>
                       )}
                     </div>

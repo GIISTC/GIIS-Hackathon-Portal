@@ -1,3 +1,5 @@
+export const MAX_TEAM_SIZE = 4
+
 // ─── Database Types ────────────────────────────────────────────
 export interface Team {
   id: string

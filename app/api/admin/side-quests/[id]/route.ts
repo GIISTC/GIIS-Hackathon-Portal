@@ -4,9 +4,9 @@ import type { QuestDifficulty } from '@/lib/types'
 
 const DIFFICULTIES: QuestDifficulty[] = ['beginner', 'intermediate', 'advanced']
 
-// PATCH: OT edits a quest's fields and/or transitions its status.
-// Allowed status flow: draft -> open -> closed. Closed quests are locked —
-// no further edits, no reopening (create a new quest instead).
+// PATCH: OT edits a quest's fields and/or transitions its status. OT has
+// full control — no locked statuses — so a mistake (wrong difficulty, a
+// typo after release, an accidental close) can always be corrected.
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { supabase, user, judge } = await requireOT()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -17,9 +17,6 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const { data: current } = await supabase.from('side_quests').select('status').eq('id', params.id).single()
     if (!current) return NextResponse.json({ error: 'Quest not found' }, { status: 404 })
-    if (current.status === 'closed') {
-      return NextResponse.json({ error: 'Closed quests are locked. Create a new quest instead.' }, { status: 400 })
-    }
 
     const body = await request.json()
     const questUpdate: Record<string, any> = {}
@@ -68,10 +65,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-// DELETE: only allowed while still a draft (never delete a quest with submissions).
-// side_quest_details cascades automatically (ON DELETE CASCADE); any uploaded
-// images are left in Storage (harmless — never linked or served to anyone once
-// the quest row is gone).
+// DELETE: OT can delete a quest in any status, including ones with live
+// picks/submissions — side_quest_details, side_quest_submissions, and
+// side_quest_picks all cascade (ON DELETE CASCADE). Any uploaded images are
+// left in Storage (harmless — never linked or served to anyone once the
+// quest row is gone). This is destructive for teams that already picked it,
+// so the confirm dialog lives in the admin UI, not here.
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   const { supabase, user, judge } = await requireOT()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -81,9 +80,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   const { data: quest } = await supabase.from('side_quests').select('status').eq('id', params.id).single()
   if (!quest) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (quest.status !== 'draft') {
-    return NextResponse.json({ error: 'Only draft quests can be deleted' }, { status: 400 })
-  }
 
   const { error } = await supabase.from('side_quests').delete().eq('id', params.id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

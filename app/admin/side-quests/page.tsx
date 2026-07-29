@@ -110,8 +110,11 @@ export default function SideQuestsPage() {
     setActionLoading(null)
   }
 
-  const deleteQuest = async (id: string) => {
-    if (!confirm('Delete this draft quest? This cannot be undone.')) return
+  const deleteQuest = async (id: string, status: string) => {
+    const warning = status === 'draft'
+      ? 'Delete this draft quest? This cannot be undone.'
+      : 'This quest has been released — deleting it also wipes any team picks and submissions tied to it. This cannot be undone. Continue?'
+    if (!confirm(warning)) return
     setActionLoading(id)
     try {
       const res = await fetch(`/api/admin/side-quests/${id}`, { method: 'DELETE' })
@@ -327,14 +330,12 @@ export default function SideQuestsPage() {
 
               <div className="mt-auto flex flex-wrap gap-2">
                 {q.status === 'draft' && (
-                  <>
-                    <button onClick={() => updateStatus(q.id, 'open')} disabled={actionLoading === q.id} className={`${smBtn} bg-gradient-to-br from-brand to-brand-blue text-base`}>Release</button>
-                    <button onClick={() => deleteQuest(q.id)} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-ink-sub hover:text-bad`}>Delete</button>
-                  </>
+                  <button onClick={() => updateStatus(q.id, 'open')} disabled={actionLoading === q.id} className={`${smBtn} bg-gradient-to-br from-brand to-brand-blue text-base`}>Release</button>
                 )}
                 {q.status === 'open' && (
                   <button onClick={() => updateStatus(q.id, 'closed')} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-brand hover:bg-brand/5`}>Close Submissions</button>
                 )}
+                <button onClick={() => deleteQuest(q.id, q.status)} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-ink-sub hover:text-bad`}>Delete</button>
                 <button onClick={() => toggleGallery(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>{galleryQuestId === q.id ? 'Hide Images' : 'Manage Images'}</button>
                 <button onClick={() => viewSubmissions(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>View Submissions</button>
               </div>

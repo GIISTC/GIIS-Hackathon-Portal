@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
+import { MAX_TEAM_SIZE } from '@/lib/types'
 
 const GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']
 
@@ -116,7 +117,7 @@ export default function RegisterPage() {
         const { data: team, error: teamError } = await supabase
           .from('teams').select('*, participants(id)').eq('team_code', joinCode.trim().toUpperCase()).single()
         if (teamError || !team) throw new Error('Invalid Team Code. Please check and try again.')
-        if (team.participants.length >= 4) throw new Error('This team is already full (max 4 members).')
+        if (team.participants.length >= MAX_TEAM_SIZE) throw new Error(`This team is already full (max ${MAX_TEAM_SIZE} members).`)
         finalTeamId = team.id
         finalTeamName = team.team_name
       }

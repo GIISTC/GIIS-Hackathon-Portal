@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import type { Participant, Team, Submission, LeaderboardEntry } from '@/lib/types'
+import { MAX_TEAM_SIZE } from '@/lib/types'
 
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
@@ -96,31 +97,12 @@ export default function DashboardPage() {
     if (!switchCode.trim() || switchCode.trim().toUpperCase() === team?.team_code) return
     setSwitchLoading(true)
     setSwitchError(null)
-    const supabase = createClient()
     try {
-      const { data: newTeam, error: teamErr } = await supabase
-        .from('teams').select('*, participants(id)').eq('team_code', switchCode.trim().toUpperCase()).single()
-      if (teamErr || !newTeam) throw new Error('Invalid Team Code.')
-      if (newTeam.participants.length >= 4) throw new Error('Target team is already full.')
-
-      const oldTeamId = team?.id
-      const myId = participant?.id
-      const { error: updateErr } = await supabase
-        .from('participants').update({ team_id: newTeam.id, is_team_leader: false }).eq('id', myId)
-      if (updateErr) throw new Error(`Update failed: ${updateErr.message}`)
-
-      if (oldTeamId) {
-        const { data: remainingMembers } = await supabase.from('participants').select('id').eq('team_id', oldTeamId)
-        if (!remainingMembers || remainingMembers.length === 0) {
-          await supabase.from('submissions').delete().eq('team_id', oldTeamId)
-          await supabase.from('teams').delete().eq('id', oldTeamId)
-        } else {
-          const hasLeader = await supabase.from('participants').select('id').eq('team_id', oldTeamId).eq('is_team_leader', true).single()
-          if (!hasLeader.data) {
-            await supabase.from('participants').update({ is_team_leader: true }).eq('id', remainingMembers[0].id)
-          }
-        }
-      }
+      const res = await fetch('/api/team/switch', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team_code: switchCode.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
       window.location.reload()
     } catch (err: any) {
       setSwitchError(err.message)
@@ -144,7 +126,7 @@ export default function DashboardPage() {
       const { data: targetTeam, error: teamErr } = await supabase
         .from('teams').select('*, participants(id)').eq('team_code', code).single()
       if (teamErr || !targetTeam) throw new Error('Invalid Team Code.')
-      if (targetTeam.participants.length >= 4) throw new Error('Team is full.')
+      if (targetTeam.participants.length >= MAX_TEAM_SIZE) throw new Error('Team is full.')
       const { error: partError } = await supabase.from('participants').insert({
         id: user.id, team_id: targetTeam.id, full_name: fullName, email: user.email,
         grade, qr_token: crypto.randomUUID(), is_team_leader: false,
@@ -277,7 +259,7 @@ export default function DashboardPage() {
           {/* Status */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {statTile('Team', team?.team_name || '—')}
-            {statTile('Members', `${teammates.length + 1} / 4`)}
+            {statTile('Members', `${teammates.length + 1} / ${MAX_TEAM_SIZE}`)}
             {statTile('Check-in', participant?.checked_in ? 'Done' : 'Pending', participant?.checked_in ? 'text-good' : 'text-warn')}
             {statTile('Submission', submission ? 'Submitted' : 'Not yet', submission ? 'text-good' : 'text-warn')}
           </div>

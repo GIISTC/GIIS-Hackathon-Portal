@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '/admin/approvals', label: 'Approvals', key: 'approvals' },
   { href: '/admin/teams', label: 'Teams', key: 'teams' },
   { href: '/admin/checkin', label: 'Check-in', key: 'checkin' },
+  { href: '/admin/attendance', label: 'Attendance', key: 'attendance' },
   { href: '/admin/submissions', label: 'Submissions', key: 'submissions' },
   { href: '/admin/judging', label: 'Judging', key: 'judging' },
   { href: '/admin/side-quests', label: 'Side Quests', key: 'sidequests' },

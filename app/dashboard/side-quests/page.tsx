@@ -35,6 +35,7 @@ export default function SideQuestsPage() {
 
   const [images, setImages] = useState<string[]>([])
   const [imagesLoading, setImagesLoading] = useState(false)
+  const [slide, setSlide] = useState(0)
 
   const load = async () => {
     const res = await fetch('/api/side-quests')
@@ -66,10 +67,16 @@ export default function SideQuestsPage() {
     try {
       const res = await fetch(`/api/side-quests/${questId}/images`)
       const data = await res.json()
-      if (res.ok) setImages(data.urls || [])
+      if (res.ok) { setImages(data.urls || []); setSlide(0) }
     } catch {}
     setImagesLoading(false)
   }
+
+  useEffect(() => {
+    if (images.length < 2) return
+    const id = setInterval(() => setSlide((s) => (s + 1) % images.length), 4000)
+    return () => clearInterval(id)
+  }, [images])
 
   const choose = async (questId: string, difficulty: QuestDifficulty) => {
     if (!confirm(`Lock in the ${DIFFICULTY_LABELS[difficulty]} quest? You won't be able to see or attempt any other quest after this — this choice is final.`)) return
@@ -159,15 +166,15 @@ export default function SideQuestsPage() {
               {openByDifficulty.map((q) => {
                 const style = DIFFICULTY_STYLE[q.difficulty as QuestDifficulty]
                 return (
-                  <div key={q.id} className={`${card} flex flex-col items-center gap-3 text-center`}>
+                  <div key={q.id} className={`${card} flex h-full flex-col items-center gap-3 text-center`}>
                     <span className={`rounded-full px-3 py-1 font-mono text-[0.62rem] font-bold uppercase tracking-wide ${style.badge}`}>
                       {DIFFICULTY_LABELS[q.difficulty as QuestDifficulty]}
                     </span>
                     <div className="flex h-16 w-16 items-center justify-center rounded-full border border-dashed border-line font-display text-2xl text-ink-dim">?</div>
-                    <p className="text-xs text-ink-dim">{style.blurb}</p>
+                    <p className="flex min-h-[2.75rem] items-center text-xs leading-snug text-ink-dim">{style.blurb}</p>
                     <span className="rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.62rem] font-bold text-brand">+{q.points} pts</span>
                     <button onClick={() => choose(q.id, q.difficulty as QuestDifficulty)} disabled={picking === q.id}
-                      className="mt-1 w-full rounded-lg bg-gradient-to-br from-brand to-brand-blue py-2.5 font-mono text-[0.68rem] font-bold uppercase tracking-[0.1em] text-base transition-opacity hover:opacity-90 disabled:opacity-50">
+                      className="mt-auto w-full rounded-lg bg-gradient-to-br from-brand to-brand-blue px-3 py-2 font-mono text-[0.6rem] font-semibold uppercase tracking-[0.06em] text-base transition-opacity hover:opacity-90 disabled:opacity-50">
                       {picking === q.id ? 'Locking in…' : 'Choose Blindly'}
                     </button>
                   </div>
@@ -200,15 +207,27 @@ export default function SideQuestsPage() {
                 <div className="mb-3">
                   {imagesLoading ? (
                     <div className="flex justify-center py-4"><div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" /></div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {images.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-lg border border-line">
-                          <img src={url} alt="" className="h-full w-full object-cover" />
-                        </a>
-                      ))}
+                  ) : images.length > 0 ? (
+                    <div className="relative overflow-hidden rounded-lg border border-line bg-base">
+                      <a href={images[slide]} target="_blank" rel="noreferrer" className="block aspect-video">
+                        <img src={images[slide]} alt="" className="h-full w-full object-contain" />
+                      </a>
+                      {images.length > 1 && (
+                        <>
+                          <button onClick={() => setSlide((s) => (s - 1 + images.length) % images.length)} aria-label="Previous image"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-base/70 px-2.5 py-1.5 text-ink backdrop-blur transition-colors hover:bg-base/90 hover:text-brand">‹</button>
+                          <button onClick={() => setSlide((s) => (s + 1) % images.length)} aria-label="Next image"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-base/70 px-2.5 py-1.5 text-ink backdrop-blur transition-colors hover:bg-base/90 hover:text-brand">›</button>
+                          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
+                            {images.map((_, i) => (
+                              <button key={i} onClick={() => setSlide(i)} aria-label={`Go to image ${i + 1}`}
+                                className={`h-1.5 w-1.5 rounded-full transition-colors ${i === slide ? 'bg-brand' : 'bg-ink-dim/60'}`} />
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
 

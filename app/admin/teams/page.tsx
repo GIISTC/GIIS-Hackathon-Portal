@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AdminNav from '@/components/AdminNav'
 import { MAX_TEAM_SIZE } from '@/lib/types'
+import { categoryFromGrades } from '@/lib/leaderboard'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
 const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
@@ -53,7 +54,7 @@ export default function AdminTeamsPage() {
     setBusy(teamId)
     try {
       const res = await fetch(`/api/admin/teams/${teamId}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ track }),
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ track: track || null }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error) }
       await loadTeams()
@@ -190,13 +191,17 @@ export default function AdminTeamsPage() {
                     <span className="font-mono tracking-[0.2em] text-brand">{t.team_code}</span>
                     <span>· {t.participants?.length || 0}/{MAX_TEAM_SIZE} members</span>
                     <span>· registered {new Date(t.created_at).toLocaleDateString()}</span>
+                    {categoryFromGrades((t.participants || []).map((p: any) => p.grade)) && (
+                      <span className="rounded-full bg-brand/10 px-2 py-0.5 font-mono text-[0.55rem] font-bold uppercase text-brand">
+                        {categoryFromGrades((t.participants || []).map((p: any) => p.grade))}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <select className={selectCls} value={t.track || ''} disabled={busy === t.id} onChange={(e) => updateTrack(t.id, e.target.value)}>
-                  <option value="" disabled>Not set</option>
-                  <option value="App Dev">App Dev</option>
-                  <option value="Web Dev">Web Dev</option>
+                  <option value="">No Track (Junior)</option>
+                  <option value="App/Web Dev">App/Web Dev</option>
                   <option value="Game Dev">Game Dev</option>
                 </select>
 

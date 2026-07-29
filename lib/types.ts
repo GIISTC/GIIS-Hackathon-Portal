@@ -231,6 +231,11 @@ export interface SideQuestSubmission {
 }
 
 // ─── Points-System Leaderboard ─────────────────────────────────
+// Track only applies to Seniors (Grades 9-12), who choose one of 2 tracks.
+// Juniors (Grades 6-8) have no track — build anything — so they rank on one
+// combined leaderboard instead of being split by pool.
+export type Track = 'App/Web Dev' | 'Game Dev'
+export const TRACKS: Track[] = ['App/Web Dev', 'Game Dev']
 export type LeaderboardPool = 'app_web' | 'game_dev'
 export type LeaderboardCategory = 'Junior' | 'Senior'
 
@@ -239,8 +244,8 @@ export interface LeaderboardEntry {
   team_id: string
   team_name: string
   project_name: string | null
-  track: 'App Dev' | 'Web Dev' | 'Game Dev'
-  pool: LeaderboardPool
+  track: Track | null
+  pool: LeaderboardPool | null
   category: LeaderboardCategory
   judge_count: number
   side_quest_points: number

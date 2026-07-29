@@ -1,7 +1,6 @@
 import { requireOT, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-
-const TRACKS = ['App Dev', 'Web Dev', 'Game Dev']
+import { TRACKS } from '@/lib/types'
 
 // PATCH: OT edits a team's name and/or track.
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -16,10 +15,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const update: Record<string, any> = {}
     if (typeof body.team_name === 'string' && body.team_name.trim()) update.team_name = body.team_name.trim()
     if (body.track !== undefined) {
-      if (body.track !== null && !TRACKS.includes(body.track)) {
+      const track = body.track || null // "" (from the "No Track" option) means Junior-style null
+      if (track !== null && !TRACKS.includes(track)) {
         return NextResponse.json({ error: 'Invalid track' }, { status: 400 })
       }
-      update.track = body.track
+      update.track = track
     }
     if (Object.keys(update).length === 0) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 

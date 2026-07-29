@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Navbar from '@/components/Navbar'
-import type { LeaderboardEntry, LeaderboardPool, LeaderboardCategory } from '@/lib/types'
+import type { LeaderboardEntry, LeaderboardPool } from '@/lib/types'
 
-type Pools = Record<LeaderboardPool, Record<LeaderboardCategory, LeaderboardEntry[]>>
+type LeaderboardData = { junior: LeaderboardEntry[]; senior: Record<LeaderboardPool, LeaderboardEntry[]> }
 
 const POLL_INTERVAL_MS = 15000
 
@@ -87,17 +87,17 @@ function CategoryTable({ label, rows }: { label: string; rows: LeaderboardEntry[
 }
 
 export default function LeaderboardPage() {
-  const [pools, setPools] = useState<Pools | null>(null)
+  const [data, setData] = useState<LeaderboardData | null>(null)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const load = async () => {
     try {
       const res = await fetch('/api/leaderboard')
-      const data = await res.json()
+      const body = await res.json()
       if (res.ok) {
-        setPools(data.pools)
-        setUpdatedAt(data.updatedAt)
+        setData({ junior: body.junior, senior: body.senior })
+        setUpdatedAt(body.updatedAt)
       }
     } catch {}
   }
@@ -135,23 +135,37 @@ export default function LeaderboardPage() {
           )}
         </header>
 
-        {!pools ? (
+        {!data ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />
             Loading leaderboard…
           </div>
         ) : (
-          <div className="grid gap-8 md:grid-cols-2">
-            {(['app_web', 'game_dev'] as const).map((pool) => (
-              <section key={pool} className="flex flex-col gap-4">
-                <h2 className="text-center font-display text-xl font-bold uppercase tracking-wide text-brand">
-                  {POOL_LABELS[pool]}
-                </h2>
-                {(['Junior', 'Senior'] as const).map((category) => (
-                  <CategoryTable key={category} label={category} rows={pools[pool][category]} />
+          <div className="flex flex-col gap-10">
+            {/* Juniors have no track — everyone ranks together */}
+            <section className="mx-auto flex w-full max-w-xl flex-col gap-4">
+              <h2 className="text-center font-display text-xl font-bold uppercase tracking-wide text-brand">
+                Junior <span className="text-ink-dim">(Grades 6–8)</span>
+              </h2>
+              <CategoryTable label="Ranked Teams" rows={data.junior} />
+            </section>
+
+            {/* Seniors split into the 2 tracks */}
+            <div>
+              <h2 className="mb-4 text-center font-display text-xl font-bold uppercase tracking-wide text-brand">
+                Senior <span className="text-ink-dim">(Grades 9–12)</span>
+              </h2>
+              <div className="grid gap-8 md:grid-cols-2">
+                {(['app_web', 'game_dev'] as const).map((pool) => (
+                  <section key={pool} className="flex flex-col gap-4">
+                    <h3 className="text-center font-mono text-sm font-bold uppercase tracking-[0.14em] text-ink-sub">
+                      {POOL_LABELS[pool]}
+                    </h3>
+                    <CategoryTable label="Ranked Teams" rows={data.senior[pool]} />
+                  </section>
                 ))}
-              </section>
-            ))}
+              </div>
+            </div>
           </div>
         )}
       </main>

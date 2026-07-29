@@ -1,12 +1,25 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { computeLeaderboard } from '@/lib/leaderboard'
-import type { LeaderboardEntry, LeaderboardPool, LeaderboardCategory } from '@/lib/types'
+import type { LeaderboardEntry, LeaderboardPool } from '@/lib/types'
 
 // This route uses no cookies/headers, so Next.js would otherwise try to
 // statically render it once at build time and serve that stale snapshot
 // forever — force per-request execution so the leaderboard is actually live.
 export const dynamic = 'force-dynamic'
+
+const strip = (e: any): LeaderboardEntry => ({
+  rank: e.rank,
+  team_id: e.team_id,
+  team_name: e.team_name,
+  project_name: e.project_name,
+  track: e.track,
+  pool: e.pool,
+  category: e.category,
+  judge_count: e.judge_count,
+  side_quest_points: e.side_quest_points,
+  total_score: e.total_score,
+})
 
 // GET: PUBLIC, no auth. Uses the service client to read the (RLS-locked)
 // criteria_scores table server-side, folds bonus points silently into
@@ -16,31 +29,14 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   try {
     const supabase = createServiceClient()
-    const { pools, updatedAt } = await computeLeaderboard(supabase)
+    const { junior, senior, updatedAt } = await computeLeaderboard(supabase)
 
-    const publicPools: Record<LeaderboardPool, Record<LeaderboardCategory, LeaderboardEntry[]>> = {
-      app_web: { Junior: [], Senior: [] },
-      game_dev: { Junior: [], Senior: [] },
+    const publicSenior: Record<LeaderboardPool, LeaderboardEntry[]> = {
+      app_web: senior.app_web.map(strip),
+      game_dev: senior.game_dev.map(strip),
     }
 
-    for (const pool of Object.keys(pools) as LeaderboardPool[]) {
-      for (const category of Object.keys(pools[pool]) as LeaderboardCategory[]) {
-        publicPools[pool][category] = pools[pool][category].map(e => ({
-          rank: e.rank,
-          team_id: e.team_id,
-          team_name: e.team_name,
-          project_name: e.project_name,
-          track: e.track,
-          pool: e.pool,
-          category: e.category,
-          judge_count: e.judge_count,
-          side_quest_points: e.side_quest_points,
-          total_score: e.total_score,
-        }))
-      }
-    }
-
-    return NextResponse.json({ pools: publicPools, updatedAt })
+    return NextResponse.json({ junior: junior.map(strip), senior: publicSenior, updatedAt })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -8,10 +8,11 @@ const HeroCanvas = nextDynamic(() => import('@/components/HeroCanvas'), { ssr: f
 
 export const dynamic = 'force-dynamic'
 
+// Track only applies to Seniors (Grades 9-12) — Juniors have no track and
+// can build whatever they want.
 const TRACKS = [
-  { tag: 'Track 01', name: 'App Dev', tool: 'MIT App Inventor / Kodular', desc: 'Build a mobile app. External libraries allowed; AI assistance permitted but must be disclosed.' },
-  { tag: 'Track 02', name: 'Web Dev', tool: 'Any Framework / Vanilla', desc: 'Build a web app or site using any framework or plain HTML/CSS/JS. Open-source libraries are fair game.' },
-  { tag: 'Track 03', name: 'Game Dev', tool: 'Scratch Only', desc: 'Build a game in Scratch. Scratch extensions only — no external code libraries.' },
+  { tag: 'Track 01', name: 'App/Web Dev', tool: 'App Inventor, Kodular, Any Framework, or Vanilla', desc: 'Build a mobile app or a web app/site. MIT App Inventor, Kodular, any framework, or plain HTML/CSS/JS — external and open-source libraries are fair game; AI assistance permitted but must be disclosed.' },
+  { tag: 'Track 02', name: 'Game Dev', tool: 'Scratch Only', desc: 'Build a game in Scratch. Scratch extensions only — no external code libraries.' },
 ]
 
 // Kept secret until the opening ceremony — only the count is public.
@@ -62,7 +63,7 @@ const FAQS = [
   { q: 'Who can participate?', a: 'All GIIS students are welcome. Teams register together as a group of 2–4 members.' },
   { q: 'Do I need to know how to code?', a: 'Teams can mix skills — coding, design, research, and presentation all contribute to a winning project.' },
   { q: 'What do I need to bring?', a: 'Your laptop, charger, ideas, and your team. Carry your QR code for check-in and food collection.' },
-  { q: 'What can we build?', a: 'Pick a track — App Dev (App Inventor / Kodular), Web Dev (any framework or vanilla), or Game Dev (Scratch only) — and tackle one of the three problem statements above.' },
+  { q: 'What can we build?', a: 'Seniors (Grades 9–12) pick a track — App/Web Dev or Game Dev (Scratch only) — and tackle one of the three problem statements above. Juniors (Grades 6–8) have no track restriction and can build anything.' },
   { q: 'How is judging done?', a: 'Each project is scored by multiple OT judges across the 7 criteria above, then averaged into a live leaderboard. Side Quests add extra points on top.' },
   { q: 'Is food provided?', a: 'Yes — meals and snacks throughout the event. Use your QR code for food collection.' },
 ]
@@ -129,7 +130,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
           {[
             { n: '48H', l: 'Build Time' },
             { n: '4', l: 'Leaderboards' },
-            { n: '3', l: 'Tracks' },
+            { n: '2', l: 'Senior Tracks' },
             { n: '150', l: 'Max Points' },
           ].map((s) => (
             <div key={s.l} className="rounded-card border border-line bg-panel/70 px-4 py-6 text-center">
@@ -203,10 +204,13 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
 
       {/* ── TRACKS ───────────────────────────────────────────── */}
       <section id="tracks" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
-        <p className={eyebrow}>// Competition Tracks</p>
+        <p className={eyebrow}>// Seniors Only</p>
         <h2 className={h2}>Choose Your Track</h2>
-        <p className="mt-3 max-w-xl text-ink-sub">Pick the track that fits your team. Each has its own permitted tools.</p>
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <p className="mt-3 max-w-xl text-ink-sub">
+          <strong className="text-ink">Seniors</strong> (Grades 9–12) pick one of 2 tracks below.{' '}
+          <strong className="text-ink">Juniors</strong> (Grades 6–8) skip this entirely — no track, build whatever you want.
+        </p>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
           {TRACKS.map((t) => (
             <div key={t.name} className={`${card} transition-colors hover:border-brand/40`}>
               <div className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-ink-dim">{t.tag}</div>
@@ -219,9 +223,9 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
         <div className="mt-4 flex items-start gap-3 rounded-card border border-brand/25 bg-brand/[0.06] px-5 py-4 text-sm text-ink-sub">
           <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
           <span>
-            App Dev &amp; Web Dev teams compete together on one leaderboard; Game Dev has its own. Each pool splits
-            into <strong className="text-ink">Junior</strong> (Grades 6–8) and <strong className="text-ink">Senior</strong> (Grades 9–12)
-            by the team&apos;s oldest member. See the full{' '}
+            Seniors compete on 2 leaderboards — <strong className="text-ink">App/Web Dev</strong> and{' '}
+            <strong className="text-ink">Game Dev</strong> — by track. Juniors rank together on one combined leaderboard,
+            no track needed. Category is decided by the <strong className="text-ink">team&apos;s oldest member</strong>. See the full{' '}
             <Link href="/leaderboard" className="text-brand underline">Leaderboard →</Link>
           </span>
         </div>

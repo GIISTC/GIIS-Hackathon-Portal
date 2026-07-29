@@ -51,10 +51,11 @@ export default function DashboardPage() {
       setTeam(part.team as unknown as Team)
 
       fetch('/api/leaderboard').then((r) => r.json()).then((data) => {
-        if (!data?.pools) return
-        const pool = (part.team as any)?.track === 'Game Dev' ? 'game_dev' : 'app_web'
-        for (const category of ['Junior', 'Senior'] as const) {
-          const entry = (data.pools[pool]?.[category] || []).find((e: LeaderboardEntry) => e.team_id === part.team_id)
+        if (!data?.junior || !data?.senior) return
+        const track = (part.team as any)?.track
+        const lists = track ? [data.senior[track === 'Game Dev' ? 'game_dev' : 'app_web']] : [data.junior]
+        for (const list of lists) {
+          const entry = (list || []).find((e: LeaderboardEntry) => e.team_id === part.team_id)
           if (entry) { setMyRank(entry); return }
         }
       }).catch(() => {})
@@ -275,7 +276,7 @@ export default function DashboardPage() {
                 {statTile('Rank', `#${myRank.rank}`, 'text-brand')}
                 {statTile('Total Score', myRank.total_score.toFixed(1), 'text-brand')}
                 {statTile('Side Quest Pts', String(myRank.side_quest_points))}
-                {statTile('Pool', `${myRank.pool === 'game_dev' ? 'Game Dev' : 'App/Web'} · ${myRank.category}`)}
+                {statTile('Pool', myRank.pool ? `${myRank.pool === 'game_dev' ? 'Game Dev' : 'App/Web Dev'} · ${myRank.category}` : myRank.category)}
               </div>
             </div>
           )}

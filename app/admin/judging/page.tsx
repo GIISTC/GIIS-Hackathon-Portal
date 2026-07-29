@@ -10,6 +10,8 @@ import {
   type CriteriaScoreForm, type AdminLeaderboardEntry, type LeaderboardPool, type LeaderboardCategory,
 } from '@/lib/types'
 
+type AdminLeaderboardData = { junior: AdminLeaderboardEntry[]; senior: Record<LeaderboardPool, AdminLeaderboardEntry[]> }
+
 const CRITERIA_KEYS = Object.keys(CRITERIA_MAX) as (keyof typeof CRITERIA_MAX)[]
 const BONUS_KEYS = Object.keys(BONUS_MAX) as (keyof typeof BONUS_MAX)[]
 
@@ -23,6 +25,39 @@ const emptyForm = (): CriteriaScoreForm => ({
   relevance: 0, creativity: 0, functionality: 0, ux: 0, presentation: 0, code_quality: 0, completeness: 0,
   bonus_mvp: 0, bonus_api: 0, bonus_database: 0, bonus_auth: 0, bonus_original_assets: 0, notes: '',
 })
+
+function LeaderboardTable({ rows }: { rows: AdminLeaderboardEntry[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse [font-variant-numeric:tabular-nums]">
+        <thead>
+          <tr className="border-b border-line text-left">
+            {['Rank', 'Team', 'Project', 'Criteria', 'Bonus', 'Side Q', 'Total', 'Judges'].map((h) => (
+              <th key={h} className="px-3 py-2 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-ink-dim">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((e, i) => (
+            <tr key={e.team_id} className="border-b border-line-soft last:border-0">
+              <td className={`px-3 py-2.5 font-mono font-bold ${i < 3 ? 'text-brand' : 'text-ink-dim'}`}>#{e.rank}</td>
+              <td className="px-3 py-2.5 font-semibold text-ink">{e.team_name}</td>
+              <td className="px-3 py-2.5 text-ink-sub">{e.project_name || '–'}</td>
+              <td className="px-3 py-2.5 text-ink-sub">{e.criteria_total.toFixed(1)}</td>
+              <td className="px-3 py-2.5 text-warn">{e.bonus_total.toFixed(1)}</td>
+              <td className="px-3 py-2.5 text-ink-sub">{e.side_quest_points}</td>
+              <td className="px-3 py-2.5 font-mono font-bold text-brand-blue">{e.total_score.toFixed(1)}</td>
+              <td className="px-3 py-2.5 text-ink-sub">{e.judge_count}</td>
+            </tr>
+          ))}
+          {rows.length === 0 && (
+            <tr><td colSpan={8} className="px-3 py-4 text-center text-sm text-ink-dim">No teams yet</td></tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 export default function JudgingPage() {
   const router = useRouter()
@@ -40,7 +75,7 @@ export default function JudgingPage() {
   const [poolFilter, setPoolFilter] = useState<'all' | LeaderboardPool>('all')
   const [categoryFilter, setCategoryFilter] = useState<'all' | LeaderboardCategory>('all')
 
-  const [leaderboard, setLeaderboard] = useState<Record<LeaderboardPool, Record<LeaderboardCategory, AdminLeaderboardEntry[]>> | null>(null)
+  const [leaderboard, setLeaderboard] = useState<AdminLeaderboardData | null>(null)
   const [lbLoading, setLbLoading] = useState(false)
 
   useEffect(() => {
@@ -61,7 +96,7 @@ export default function JudgingPage() {
   const loadTeams = async () => {
     const supabase = createClient()
     const [{ data: teamsData }, { data: subsData }] = await Promise.all([
-      supabase.from('teams').select('*, participants(grade)').not('track', 'is', null).order('team_name'),
+      supabase.from('teams').select('*, participants(grade)').order('team_name'),
       supabase.from('submissions').select('team_id, project_name'),
     ])
     const subByTeam = new Map((subsData || []).map((s: any) => [s.team_id, s.project_name]))
@@ -131,16 +166,19 @@ export default function JudgingPage() {
     try {
       const res = await fetch('/api/admin/leaderboard')
       const data = await res.json()
-      if (res.ok) setLeaderboard(data.pools)
+      if (res.ok) setLeaderboard({ junior: data.junior, senior: data.senior })
     } catch {}
     setLbLoading(false)
   }
 
-  const teamPool = (team: any): LeaderboardPool => (team.track === 'Game Dev' ? 'game_dev' : 'app_web')
+  // Pool only applies to Seniors (they picked one of the 2 tracks). Juniors
+  // have no track, so they never match a specific pool filter — only "All".
+  const teamPool = (team: any): LeaderboardPool | null => (team.track ? (team.track === 'Game Dev' ? 'game_dev' : 'app_web') : null)
   const teamCategory = (team: any) => categoryFromGrades((team.participants || []).map((p: any) => p.grade))
 
   const filteredTeams = teams.filter((t) => {
-    if (poolFilter !== 'all' && teamPool(t) !== poolFilter) return false
+    if (poolFilter !== 'all' && teamCategory(t) === 'Senior' && teamPool(t) !== poolFilter) return false
+    if (poolFilter !== 'all' && teamCategory(t) === 'Junior') return false
     if (categoryFilter !== 'all' && teamCategory(t) !== categoryFilter) return false
     return true
   })
@@ -242,7 +280,7 @@ export default function JudgingPage() {
                 <form onSubmit={handleSubmitScore}>
                   <div className="mb-4">
                     <h2 className="font-display text-xl font-bold text-ink">{selectedTeam.team_name}</h2>
-                    <p className="text-sm text-ink-sub">{selectedTeam.project_name || 'No submission yet'} · {selectedTeam.track} · {teamCategory(selectedTeam) || '—'}</p>
+                    <p className="text-sm text-ink-sub">{selectedTeam.project_name || 'No submission yet'} · {selectedTeam.track || 'No Track'} · {teamCategory(selectedTeam) || '—'}</p>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -297,44 +335,20 @@ export default function JudgingPage() {
             {lbLoading || !leaderboard ? (
               <div className="flex justify-center py-10"><div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" /></div>
             ) : (
-              (['app_web', 'game_dev'] as const).map((pool) => (
-                <div key={pool} className="mb-6 last:mb-0">
-                  <h2 className="mb-2 font-display text-lg font-bold uppercase tracking-wide text-brand">{pool === 'app_web' ? 'App / Web Dev' : 'Game Dev'}</h2>
-                  {(['Junior', 'Senior'] as const).map((category) => (
-                    <div key={category} className="mb-4">
-                      <h3 className="mb-1.5 font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-dim">{category}</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse [font-variant-numeric:tabular-nums]">
-                          <thead>
-                            <tr className="border-b border-line text-left">
-                              {['Rank', 'Team', 'Project', 'Criteria', 'Bonus', 'Side Q', 'Total', 'Judges'].map((h) => (
-                                <th key={h} className="px-3 py-2 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-ink-dim">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {leaderboard[pool][category].map((e, i) => (
-                              <tr key={e.team_id} className="border-b border-line-soft last:border-0">
-                                <td className={`px-3 py-2.5 font-mono font-bold ${i < 3 ? 'text-brand' : 'text-ink-dim'}`}>#{e.rank}</td>
-                                <td className="px-3 py-2.5 font-semibold text-ink">{e.team_name}</td>
-                                <td className="px-3 py-2.5 text-ink-sub">{e.project_name || '–'}</td>
-                                <td className="px-3 py-2.5 text-ink-sub">{e.criteria_total.toFixed(1)}</td>
-                                <td className="px-3 py-2.5 text-warn">{e.bonus_total.toFixed(1)}</td>
-                                <td className="px-3 py-2.5 text-ink-sub">{e.side_quest_points}</td>
-                                <td className="px-3 py-2.5 font-mono font-bold text-brand-blue">{e.total_score.toFixed(1)}</td>
-                                <td className="px-3 py-2.5 text-ink-sub">{e.judge_count}</td>
-                              </tr>
-                            ))}
-                            {leaderboard[pool][category].length === 0 && (
-                              <tr><td colSpan={8} className="px-3 py-4 text-center text-sm text-ink-dim">No teams yet</td></tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  ))}
+              <>
+                <div className="mb-6">
+                  <h2 className="mb-2 font-display text-lg font-bold uppercase tracking-wide text-brand">Junior <span className="text-ink-dim">(no track)</span></h2>
+                  <LeaderboardTable rows={leaderboard.junior} />
                 </div>
-              ))
+                {(['app_web', 'game_dev'] as const).map((pool) => (
+                  <div key={pool} className="mb-6 last:mb-0">
+                    <h2 className="mb-2 font-display text-lg font-bold uppercase tracking-wide text-brand">
+                      Senior — {pool === 'app_web' ? 'App / Web Dev' : 'Game Dev'}
+                    </h2>
+                    <LeaderboardTable rows={leaderboard.senior[pool]} />
+                  </div>
+                ))}
+              </>
             )}
           </div>
         )}

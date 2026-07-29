@@ -9,31 +9,37 @@ import {
 const CRITERIA_KEYS = Object.keys(CRITERIA_MAX) as (keyof typeof CRITERIA_MAX)[]
 const BONUS_KEYS = Object.keys(BONUS_MAX) as (keyof typeof BONUS_MAX)[]
 
+// A single grade string ("Grade 9") -> Junior (6-8) or Senior (9-12).
+export function gradeToCategory(grade: string): LeaderboardCategory | null {
+  const m = /grade\s*(\d+)/i.exec(grade)
+  if (!m) return null
+  return parseInt(m[1], 10) <= 8 ? 'Junior' : 'Senior'
+}
+
 // Highest grade on the team decides the category (rulebook rule for mixed-grade teams).
 export function categoryFromGrades(grades: string[]): LeaderboardCategory | null {
-  const nums = grades
-    .map(g => {
-      const m = /grade\s*(\d+)/i.exec(g)
-      return m ? parseInt(m[1], 10) : null
-    })
-    .filter((n): n is number => n !== null)
-  if (nums.length === 0) return null
-  return Math.max(...nums) <= 8 ? 'Junior' : 'Senior'
+  const cats = grades.map(gradeToCategory).filter((c): c is LeaderboardCategory => c !== null)
+  if (cats.length === 0) return null
+  return cats.includes('Senior') ? 'Senior' : 'Junior'
 }
 
 export type LeaderboardResult = {
-  pools: Record<LeaderboardPool, Record<LeaderboardCategory, AdminLeaderboardEntry[]>>
+  // Juniors have no track (build anything) so they rank on one combined
+  // leaderboard. Seniors must pick one of the 2 tracks, so they're split
+  // into pools.
+  junior: AdminLeaderboardEntry[]
+  senior: Record<LeaderboardPool, AdminLeaderboardEntry[]>
   updatedAt: string
 }
 
 // Computes the full points breakdown (incl. secret bonus fields) for every
-// team, grouped into the 4 pool x category leaderboards. Callers that serve
-// participants MUST strip bonus-derived fields before responding — this
-// function itself does not hide anything, it's meant for OT-only or
-// server-internal use (see app/api/leaderboard/route.ts for the public cut).
+// team. Callers that serve participants MUST strip bonus-derived fields
+// before responding — this function itself does not hide anything, it's
+// meant for OT-only or server-internal use (see app/api/leaderboard/route.ts
+// for the public cut).
 export async function computeLeaderboard(supabase: any): Promise<LeaderboardResult> {
   const [{ data: teams }, { data: submissions }, { data: scores }, { data: questSubs }] = await Promise.all([
-    supabase.from('teams').select('id, team_name, track, participants(grade)').not('track', 'is', null),
+    supabase.from('teams').select('id, team_name, track, participants(grade)'),
     supabase.from('submissions').select('team_id, project_name'),
     supabase.from('criteria_scores').select('*'),
     supabase.from('side_quest_submissions').select('team_id, verdict, quest:side_quests(points)').eq('verdict', 'correct'),
@@ -54,18 +60,22 @@ export async function computeLeaderboard(supabase: any): Promise<LeaderboardResu
     questPointsByTeam.set(qs.team_id, (questPointsByTeam.get(qs.team_id) || 0) + pts)
   })
 
-  const pools: LeaderboardResult['pools'] = {
-    app_web: { Junior: [], Senior: [] },
-    game_dev: { Junior: [], Senior: [] },
-  }
+  const junior: AdminLeaderboardEntry[] = []
+  const senior: Record<LeaderboardPool, AdminLeaderboardEntry[]> = { app_web: [], game_dev: [] }
 
   for (const team of teams || []) {
     const grades = (team.participants || []).map((p: any) => p.grade).filter(Boolean)
     const category = categoryFromGrades(grades)
     if (!category) continue // no participants with a parseable grade — exclude from ranking
 
-    const track = team.track as 'App Dev' | 'Web Dev' | 'Game Dev'
-    const pool: LeaderboardPool = track === 'Game Dev' ? 'game_dev' : 'app_web'
+    // Seniors must have picked one of the 2 tracks to be poolable; if OT
+    // hasn't set one yet, hold the team out of the ranked leaderboard
+    // rather than guessing a pool for them.
+    let pool: LeaderboardPool | null = null
+    if (category === 'Senior') {
+      if (team.track !== 'App/Web Dev' && team.track !== 'Game Dev') continue
+      pool = team.track === 'Game Dev' ? 'game_dev' : 'app_web'
+    }
 
     const judgeScores = scoresByTeam.get(team.id) || []
     const judgeCount = judgeScores.length
@@ -95,7 +105,7 @@ export async function computeLeaderboard(supabase: any): Promise<LeaderboardResu
       team_id: team.id,
       team_name: team.team_name,
       project_name: submissionByTeam.get(team.id) ?? null,
-      track,
+      track: category === 'Senior' ? team.track : null,
       pool,
       category,
       judge_count: judgeCount,
@@ -117,15 +127,17 @@ export async function computeLeaderboard(supabase: any): Promise<LeaderboardResu
       bonus_total: bonusTotal,
     }
 
-    pools[pool][category].push(entry)
+    if (category === 'Junior') junior.push(entry)
+    else senior[pool!].push(entry)
   }
 
-  for (const pool of Object.keys(pools) as LeaderboardPool[]) {
-    for (const category of Object.keys(pools[pool]) as LeaderboardCategory[]) {
-      pools[pool][category].sort((a, b) => b.total_score - a.total_score)
-      pools[pool][category].forEach((entry, i) => { entry.rank = i + 1 })
-    }
+  junior.sort((a, b) => b.total_score - a.total_score)
+  junior.forEach((entry, i) => { entry.rank = i + 1 })
+
+  for (const pool of Object.keys(senior) as LeaderboardPool[]) {
+    senior[pool].sort((a, b) => b.total_score - a.total_score)
+    senior[pool].forEach((entry, i) => { entry.rank = i + 1 })
   }
 
-  return { pools, updatedAt: new Date().toISOString() }
+  return { junior, senior, updatedAt: new Date().toISOString() }
 }

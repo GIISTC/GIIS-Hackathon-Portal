@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import { MAX_TEAM_SIZE } from '@/lib/types'
+import { gradeToCategory } from '@/lib/leaderboard'
 
 const GRADES = ['Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']
 
+// Track only applies to Seniors (Grades 9-12) — Juniors have no track and
+// can build whatever they want.
 const TRACKS = [
-  { value: 'App Dev', label: 'App Dev — MIT App Inventor / Kodular' },
-  { value: 'Web Dev', label: 'Web Dev — Any framework or vanilla HTML/CSS/JS' },
+  { value: 'App/Web Dev', label: 'App/Web Dev — MIT App Inventor, Kodular, any framework, or vanilla HTML/CSS/JS' },
   { value: 'Game Dev', label: 'Game Dev — Scratch only' },
 ]
 
@@ -66,13 +68,15 @@ export default function RegisterPage() {
   const validate = (): string | null => {
     if (mode === 'create' && !teamName.trim()) return 'Team name is required.'
     if (mode === 'create' && teamName.trim().length < 3) return 'Team name must be at least 3 characters.'
-    if (mode === 'create' && !track) return 'Please select a track.'
     for (let i = 0; i < memberCount; i++) {
       const m = members[i]
       if (!m.full_name.trim()) return `Member ${i + 1}: Full name is required.`
       if (!m.email.trim() || !m.email.includes('@')) return `Member ${i + 1}: Valid email is required.`
       if (!m.grade) return `Member ${i + 1}: Grade is required.`
       if (!m.password || m.password.length < 8) return `Member ${i + 1}: Password must be at least 8 characters.`
+    }
+    if (mode === 'create' && gradeToCategory(members[0].grade) === 'Senior' && !track) {
+      return 'Seniors (Grades 9–12) must select a track.'
     }
     const emails = members.slice(0, memberCount).map((m) => m.email.toLowerCase())
     if (new Set(emails).size !== emails.length) return 'All members must have unique email addresses.'
@@ -102,8 +106,9 @@ export default function RegisterPage() {
 
       if (mode === 'create') {
         const teamCode = generateTeamCode()
+        const isSenior = gradeToCategory(activeMembers[0].grade) === 'Senior'
         const { data: team, error: teamError } = await supabase
-          .from('teams').insert({ team_name: teamName.trim(), team_code: teamCode, track }).select().single()
+          .from('teams').insert({ team_name: teamName.trim(), team_code: teamCode, track: isSenior ? track : null }).select().single()
         if (teamError) {
           if (teamError.message.includes('unique') || teamError.message.includes('duplicate')) {
             throw new Error('A team with this name already exists. Please choose a different name.')
@@ -229,16 +234,10 @@ export default function RegisterPage() {
                     value={teamName} onChange={(e) => setTeamName(e.target.value)} maxLength={50} required />
                   <span className="mt-1 block text-xs text-ink-dim">{teamName.length}/50 characters</span>
                 </div>
-                <div>
-                  <label className={labelCls} htmlFor="track">Track *</label>
-                  <select id="track" className={inputCls} value={track} onChange={(e) => setTrack(e.target.value)} required>
-                    <option value="" disabled>Select your track</option>
-                    {TRACKS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                  <span className="mt-1 block text-xs text-ink-dim">App Dev &amp; Web Dev share one leaderboard; Game Dev has its own.</span>
-                </div>
                 <div className="rounded-lg border border-brand/25 bg-brand/[0.06] px-4 py-3 text-sm text-ink-sub">
                   You&apos;re registering as the <strong className="text-ink">Team Leader</strong>. After creating your team, share the Team Code so teammates can join and set their own passwords.
+                  Enter your grade below — <strong className="text-ink">Seniors (Grades 9–12)</strong> will be asked to pick a track;{' '}
+                  <strong className="text-ink">Juniors (Grades 6–8)</strong> have no track and can build anything.
                 </div>
               </div>
             ) : (
@@ -252,8 +251,8 @@ export default function RegisterPage() {
                 <span className="mt-1 block text-xs text-ink-dim">Ask your team leader for the 6-character code.</span>
                 {joinPreview && (
                   <div className="mt-3 rounded-lg border border-brand/25 bg-brand/[0.06] px-4 py-3 text-sm text-ink-sub">
-                    Joining <strong className="text-ink">{joinPreview.team_name}</strong> · Track:{' '}
-                    <strong className="text-brand">{joinPreview.track || 'Not set yet'}</strong>
+                    Joining <strong className="text-ink">{joinPreview.team_name}</strong>
+                    {joinPreview.track && <> · Track: <strong className="text-brand">{joinPreview.track}</strong></>}
                   </div>
                 )}
                 {joinPreviewError && (
@@ -297,6 +296,23 @@ export default function RegisterPage() {
                       </select>
                     </div>
                   </div>
+
+                  {mode === 'create' && i === 0 && gradeToCategory(member.grade) === 'Senior' && (
+                    <div>
+                      <label className={labelCls} htmlFor="track">Track *</label>
+                      <select id="track" className={inputCls} value={track} onChange={(e) => setTrack(e.target.value)} required>
+                        <option value="" disabled>Select your track</option>
+                        {TRACKS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                      <span className="mt-1 block text-xs text-ink-dim">Seniors pick one track — App/Web Dev or Game Dev — and compete on that leaderboard.</span>
+                    </div>
+                  )}
+                  {mode === 'create' && i === 0 && member.grade && gradeToCategory(member.grade) === 'Junior' && (
+                    <div className="rounded-lg border border-line bg-base/40 px-4 py-2.5 text-xs text-ink-dim">
+                      No track needed — Juniors (Grades 6–8) can build anything and rank on one combined leaderboard.
+                    </div>
+                  )}
+
                   <div>
                     <label className={labelCls} htmlFor={`password-${i}`}>Personal Password *</label>
                     <input id={`password-${i}`} type="password" className={inputCls} minLength={8} required

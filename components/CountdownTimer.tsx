@@ -68,14 +68,19 @@ export default function CountdownTimer({ targetDate }: { targetDate: string }) {
   return (
     <div className={styles.countdown}>
       {units.map((unit, i) => (
-        <div key={unit.key} className={styles.unit}>
-          <div className={`${styles.valueWrapper} ${ticking === unit.key ? styles.tick : ''}`}>
-            <div className={styles.value}>
-              {String(unit.value).padStart(2, '0')}
+        // Each unit and its trailing colon are grouped into one wrap-atomic
+        // block — otherwise flex-wrap on narrow screens can split a colon
+        // onto its own line or leave it stranded next to the wrong unit.
+        <div key={unit.key} className={styles.unitGroup}>
+          <div className={styles.unit}>
+            <div className={`${styles.valueWrapper} ${ticking === unit.key ? styles.tick : ''}`}>
+              <div className={styles.value}>
+                {String(unit.value).padStart(2, '0')}
+              </div>
+              <div className={styles.glassReflect} />
             </div>
-            <div className={styles.glassReflect} />
+            <div className={styles.label}>{unit.label}</div>
           </div>
-          <div className={styles.label}>{unit.label}</div>
           {i < units.length - 1 && (
             <div className={styles.separator}>:</div>
           )}

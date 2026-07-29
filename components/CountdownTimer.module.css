@@ -1,8 +1,16 @@
 .countdown {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  flex-wrap: wrap;
+  row-gap: 20px;
   gap: 0;
+  max-width: 100%;
+}
+
+.unitGroup {
+  display: flex;
+  align-items: flex-start;
 }
 
 .unit {
@@ -130,4 +138,15 @@
 @media (max-width: 600px) {
   .valueWrapper { min-width: 70px; padding: 14px 16px; }
   .separator { font-size: 2rem; padding: 0 4px; padding-top: 12px; padding-bottom: 30px; }
+}
+
+/* Below ~430px, four boxes + three colons no longer fit on one line even
+   at the sizes above — wrap into two rows of two instead of clipping. */
+@media (max-width: 430px) {
+  .countdown { column-gap: 10px; row-gap: 16px; }
+  .valueWrapper { min-width: 0; padding: 12px 14px; }
+  .value { font-size: clamp(1.7rem, 9vw, 2.2rem); letter-spacing: 1px; }
+  .separator { font-size: 1.5rem; padding: 0 6px; padding-top: 10px; }
+  .label { font-size: 0.55rem; letter-spacing: 2px; bottom: -20px; }
+  .unit { padding-bottom: 24px; }
 }

@@ -322,7 +322,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
           <div className="pointer-events-none absolute -top-16 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" />
           <div className="relative">
             <p className={`${eyebrow} inline-block`}>// Ready to hack?</p>
-            <h2 className="font-display text-3xl font-black text-ink sm:text-4xl">Join the Revolution</h2>
+            <h2 className="font-display text-3xl font-black text-ink sm:text-4xl">Join us Today!</h2>
             <p className="mx-auto mt-3 max-w-md text-ink-sub">
               Register for the Hackathon Today!
             </p>

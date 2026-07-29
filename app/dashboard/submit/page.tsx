@@ -95,7 +95,7 @@ export default function SubmitPage() {
     return (
       <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
-        <div className="flex min-h-screen flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
+        <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />Loading…
         </div>
       </div>
@@ -106,7 +106,7 @@ export default function SubmitPage() {
     return (
       <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
-        <div className="flex min-h-screen items-center justify-center px-4 py-28">
+        <div className="flex min-h-[100dvh] items-center justify-center px-4 py-28">
           <div className={`${card} max-w-md text-center`}>
             <div className="font-mono text-[0.7rem] uppercase tracking-[0.24em] text-brand">Success</div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink">Submission {existing ? 'Updated' : 'Received'}</h1>

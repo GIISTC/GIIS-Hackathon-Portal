@@ -84,7 +84,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────── */}
-      <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-28 text-center">
+      <section className="relative flex min-h-[100dvh] flex-col items-center justify-center overflow-hidden px-4 pb-16 pt-28 text-center">
         <HeroCanvas />
         <div
           aria-hidden

@@ -66,7 +66,7 @@ export default function LoginPage() {
         className="pointer-events-none fixed inset-0 z-0"
         style={{ background: 'radial-gradient(70% 50% at 50% 0%, rgba(47,230,200,0.08), transparent 60%)' }}
       />
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-28">
+      <div className="relative z-10 flex min-h-[100dvh] items-center justify-center px-4 py-28">
         <div className="w-full max-w-md rounded-2xl border border-line bg-panel/70 p-8 shadow-panel backdrop-blur">
           <div className="mb-6 flex items-center gap-2.5">
             <img src="/logo.png" alt="GIIS Hackathon" width={32} height={32} className="h-8 w-8 object-contain" />

@@ -170,7 +170,7 @@ export default function RegisterPage() {
       <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
         {glow}
-        <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-28">
+        <div className="relative z-10 flex min-h-[100dvh] items-center justify-center px-4 py-28">
           <div className="w-full max-w-lg rounded-2xl border border-line bg-panel/70 p-8 text-center shadow-panel backdrop-blur">
             <div className="font-mono text-[0.7rem] uppercase tracking-[0.24em] text-brand">Registration Complete</div>
             <h1 className="mt-2 font-display text-2xl font-bold text-ink">You&apos;re In</h1>

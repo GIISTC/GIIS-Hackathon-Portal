@@ -144,7 +144,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
-        <div className="flex min-h-screen flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
+        <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />Loading your dashboard…
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-base font-body text-ink">
         <Navbar />
-        <div className="flex min-h-screen items-center justify-center px-4 py-28">
+        <div className="flex min-h-[100dvh] items-center justify-center px-4 py-28">
           <div className="w-full max-w-md rounded-2xl border border-line bg-panel/70 p-8 shadow-panel">
             <h1 className="font-display text-2xl font-bold text-brand">Finish Your Profile</h1>
             <p className="mt-1.5 text-sm text-ink-sub">Your account exists but we couldn&apos;t find your team details. Let&apos;s fix that.</p>

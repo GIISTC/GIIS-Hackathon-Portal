@@ -14,7 +14,7 @@ const CRITERIA_KEYS = Object.keys(CRITERIA_MAX) as (keyof typeof CRITERIA_MAX)[]
 const BONUS_KEYS = Object.keys(BONUS_MAX) as (keyof typeof BONUS_MAX)[]
 
 const shell = 'min-h-screen bg-base font-body text-ink'
-const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8'
+const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
 const labelCls = 'mb-1.5 block font-mono text-[0.6rem] uppercase tracking-[0.12em] text-brand'

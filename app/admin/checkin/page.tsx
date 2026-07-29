@@ -9,7 +9,7 @@ import type { Participant } from '@/lib/types'
 type ScanState = 'idle' | 'scanning' | 'success' | 'already' | 'error'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
-const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8'
+const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 
 export default function CheckinPage() {

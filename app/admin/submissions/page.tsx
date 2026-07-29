@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import AdminNav from '@/components/AdminNav'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
-const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8'
+const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const linkBtn = 'rounded-md border border-line px-2.5 py-1 font-mono text-[0.62rem] uppercase tracking-[0.1em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5'
 

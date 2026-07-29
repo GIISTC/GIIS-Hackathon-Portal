@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AdminNav from '@/components/AdminNav'
-import type { SideQuest, SideQuestSubmission } from '@/lib/types'
+import type { SideQuest, SideQuestSubmission, QuestDifficulty } from '@/lib/types'
+import { DIFFICULTY_LABELS } from '@/lib/types'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
 const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
@@ -12,6 +13,8 @@ const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
 const labelCls = 'mb-1.5 block font-mono text-[0.6rem] uppercase tracking-[0.12em] text-brand'
 const smBtn = 'rounded-lg px-3 py-1.5 font-mono text-[0.62rem] font-bold uppercase tracking-[0.1em] transition-colors'
+
+const DIFFICULTIES: QuestDifficulty[] = ['beginner', 'intermediate', 'advanced']
 
 export default function SideQuestsPage() {
   const router = useRouter()
@@ -21,7 +24,8 @@ export default function SideQuestsPage() {
 
   const [quests, setQuests] = useState<SideQuest[]>([])
   const [showCreate, setShowCreate] = useState(false)
-  const [form, setForm] = useState({ title: '', description: '', points: 10 })
+  const [form, setForm] = useState({ title: '', description: '', points: 10, difficulty: 'beginner' as QuestDifficulty })
+  const [files, setFiles] = useState<File[]>([])
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -30,6 +34,11 @@ export default function SideQuestsPage() {
   const [subsLoading, setSubsLoading] = useState(false)
   const [gradingId, setGradingId] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const [galleryQuestId, setGalleryQuestId] = useState<string | null>(null)
+  const [galleryUrls, setGalleryUrls] = useState<{ path: string; url: string }[]>([])
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -66,7 +75,19 @@ export default function SideQuestsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setForm({ title: '', description: '', points: 10 })
+
+      if (files.length > 0) {
+        const fd = new FormData()
+        files.forEach((f) => fd.append('images', f))
+        const imgRes = await fetch(`/api/admin/side-quests/${data.id}/images`, { method: 'POST', body: fd })
+        if (!imgRes.ok) {
+          const imgData = await imgRes.json()
+          throw new Error(`Quest created, but image upload failed: ${imgData.error}`)
+        }
+      }
+
+      setForm({ title: '', description: '', points: 10, difficulty: 'beginner' })
+      setFiles([])
       setShowCreate(false)
       await loadQuests()
     } catch (err: any) {
@@ -96,6 +117,7 @@ export default function SideQuestsPage() {
       const res = await fetch(`/api/admin/side-quests/${id}`, { method: 'DELETE' })
       if (!res.ok) { const data = await res.json(); throw new Error(data.error) }
       if (selectedQuestId === id) setSelectedQuestId(null)
+      if (galleryQuestId === id) setGalleryQuestId(null)
       await loadQuests()
     } catch (err: any) {
       alert(err.message || 'Failed to delete quest.')
@@ -129,6 +151,57 @@ export default function SideQuestsPage() {
     setGradingId(null)
   }
 
+  const fetchGallery = async (id: string) => {
+    setGalleryLoading(true)
+    try {
+      const res = await fetch(`/api/side-quests/${id}/images`)
+      const data = await res.json()
+      const quest = quests.find((q) => q.id === id)
+      const paths = quest?.image_paths || []
+      if (res.ok) setGalleryUrls(paths.map((p, i) => ({ path: p, url: data.urls[i] })))
+    } catch {}
+    setGalleryLoading(false)
+  }
+
+  const toggleGallery = async (id: string) => {
+    if (galleryQuestId === id) { setGalleryQuestId(null); return }
+    setGalleryQuestId(id)
+    setGalleryUrls([])
+    await fetchGallery(id)
+  }
+
+  const uploadMoreImages = async (id: string, fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return
+    setUploadingFor(id)
+    try {
+      const fd = new FormData()
+      Array.from(fileList).forEach((f) => fd.append('images', f))
+      const res = await fetch(`/api/admin/side-quests/${id}/images`, { method: 'POST', body: fd })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await loadQuests()
+      await fetchGallery(id)
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload images.')
+    }
+    setUploadingFor(null)
+  }
+
+  const deleteImage = async (questId: string, path: string) => {
+    if (!confirm('Remove this image from the quest?')) return
+    try {
+      const res = await fetch(`/api/admin/side-quests/${questId}/images`, {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await loadQuests()
+      setGalleryUrls((prev) => prev.filter((g) => g.path !== path))
+    } catch (err: any) {
+      alert(err.message || 'Failed to remove image.')
+    }
+  }
+
   const selectedQuest = quests.find((q) => q.id === selectedQuestId)
 
   const statusBadge = (s: string) => {
@@ -136,6 +209,14 @@ export default function SideQuestsPage() {
       open: 'bg-good/15 text-good', closed: 'bg-bad/15 text-bad', draft: 'bg-warn/15 text-warn',
     }
     return <span className={`rounded-full px-2.5 py-1 font-mono text-[0.58rem] font-bold uppercase tracking-wide ${map[s]}`}>{s}</span>
+  }
+
+  const difficultyBadge = (d: QuestDifficulty | null | undefined) => {
+    if (!d) return null
+    const map: Record<QuestDifficulty, string> = {
+      beginner: 'bg-good/15 text-good', intermediate: 'bg-warn/15 text-warn', advanced: 'bg-bad/15 text-bad',
+    }
+    return <span className={`rounded-full px-2.5 py-1 font-mono text-[0.58rem] font-bold uppercase tracking-wide ${map[d]}`}>{DIFFICULTY_LABELS[d]}</span>
   }
 
   if (loading) {
@@ -173,7 +254,7 @@ export default function SideQuestsPage() {
         <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Side Quests</h1>
-            <p className="text-sm text-ink-sub">Release bonus challenges and grade submissions</p>
+            <p className="text-sm text-ink-sub">Release blind-pick challenges — teams choose a difficulty tier without seeing its content</p>
           </div>
           <button onClick={() => setShowCreate(!showCreate)}
             className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-4 py-2.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.12em] text-base transition-opacity hover:opacity-90">
@@ -186,13 +267,33 @@ export default function SideQuestsPage() {
             <h2 className="mb-4 font-display text-base font-bold text-ink">Create a Side Quest</h2>
             <form onSubmit={handleCreate} className="flex flex-col gap-4">
               <div>
-                <label className={labelCls}>Title</label>
+                <label className={labelCls}>Difficulty Tier</label>
+                <div className="flex gap-2">
+                  {DIFFICULTIES.map((d) => (
+                    <button key={d} type="button" onClick={() => setForm((f) => ({ ...f, difficulty: d }))}
+                      className={`flex-1 rounded-lg border px-3 py-2 font-mono text-[0.68rem] font-bold uppercase tracking-[0.08em] transition-colors ${
+                        form.difficulty === d ? 'border-brand bg-brand/10 text-brand' : 'border-line text-ink-sub hover:border-line-soft'
+                      }`}>
+                      {DIFFICULTY_LABELS[d]}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-ink-dim">Participants see this tier before picking — everything below stays hidden until they commit.</p>
+              </div>
+              <div>
+                <label className={labelCls}>Title <span className="text-ink-dim normal-case tracking-normal">(hidden until picked)</span></label>
                 <input className={inputCls} value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="e.g. Output Prediction" />
               </div>
               <div>
-                <label className={labelCls}>Task Description / Material</label>
+                <label className={labelCls}>Task Description / Material <span className="text-ink-dim normal-case tracking-normal">(hidden until picked)</span></label>
                 <textarea className={`${inputCls} min-h-[100px]`} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="What should teams do? Include any code snippet, prompt, or instructions here." />
+              </div>
+              <div>
+                <label className={labelCls}>Images <span className="text-ink-dim normal-case tracking-normal">(optional, hidden until picked)</span></label>
+                <input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                  className="w-full rounded-lg border border-dashed border-line bg-panel/40 px-3 py-2.5 text-sm text-ink-sub file:mr-3 file:rounded-md file:border-0 file:bg-brand/15 file:px-3 file:py-1.5 file:font-mono file:text-[0.62rem] file:font-bold file:uppercase file:text-brand" />
+                {files.length > 0 && <p className="mt-1.5 text-xs text-ink-dim">{files.length} image{files.length > 1 ? 's' : ''} selected</p>}
               </div>
               <div>
                 <label className={labelCls}>Points</label>
@@ -211,12 +312,19 @@ export default function SideQuestsPage() {
         <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {quests.map((q) => (
             <div key={q.id} className={`${card} flex flex-col gap-2.5`}>
-              <div className="flex items-center justify-between">
-                {statusBadge(q.status)}
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <div className="flex flex-wrap gap-1.5">
+                  {statusBadge(q.status)}
+                  {difficultyBadge(q.difficulty)}
+                </div>
                 <span className="rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.6rem] font-bold text-brand">+{q.points} pts</span>
               </div>
               <h3 className="font-display text-base font-bold text-ink">{q.title}</h3>
               <p className="flex-1 whitespace-pre-wrap text-sm text-ink-sub">{q.description}</p>
+              {(q.image_paths?.length ?? 0) > 0 && (
+                <p className="text-xs text-ink-dim">🖼 {q.image_paths!.length} image{q.image_paths!.length > 1 ? 's' : ''}</p>
+              )}
+
               <div className="mt-auto flex flex-wrap gap-2">
                 {q.status === 'draft' && (
                   <>
@@ -227,8 +335,34 @@ export default function SideQuestsPage() {
                 {q.status === 'open' && (
                   <button onClick={() => updateStatus(q.id, 'closed')} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-brand hover:bg-brand/5`}>Close Submissions</button>
                 )}
+                <button onClick={() => toggleGallery(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>{galleryQuestId === q.id ? 'Hide Images' : 'Manage Images'}</button>
                 <button onClick={() => viewSubmissions(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>View Submissions</button>
               </div>
+
+              {galleryQuestId === q.id && (
+                <div className="mt-2 border-t border-dashed border-line pt-3">
+                  {galleryLoading ? (
+                    <div className="flex justify-center py-4"><div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" /></div>
+                  ) : (
+                    <div className="mb-2 grid grid-cols-3 gap-2">
+                      {galleryUrls.map((g) => (
+                        <div key={g.path} className="group relative aspect-square overflow-hidden rounded-lg border border-line">
+                          <img src={g.url} alt="" className="h-full w-full object-cover" />
+                          <button onClick={() => deleteImage(q.id, g.path)}
+                            className="absolute right-1 top-1 rounded-full bg-base/80 px-1.5 py-0.5 text-xs text-bad opacity-0 transition-opacity group-hover:opacity-100">✕</button>
+                        </div>
+                      ))}
+                      {galleryUrls.length === 0 && <p className="col-span-3 text-xs text-ink-dim">No images yet.</p>}
+                    </div>
+                  )}
+                  <label className="block">
+                    <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.1em] text-ink-dim">Add more</span>
+                    <input type="file" accept="image/*" multiple disabled={uploadingFor === q.id}
+                      onChange={(e) => uploadMoreImages(q.id, e.target.files)}
+                      className="w-full text-xs text-ink-sub file:mr-2 file:rounded-md file:border-0 file:bg-brand/15 file:px-2.5 file:py-1 file:font-mono file:text-[0.6rem] file:font-bold file:uppercase file:text-brand" />
+                  </label>
+                </div>
+              )}
             </div>
           ))}
           {quests.length === 0 && <p className="text-sm text-ink-dim">No side quests yet. Create one to get started.</p>}

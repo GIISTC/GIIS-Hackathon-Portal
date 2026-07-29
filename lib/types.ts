@@ -179,16 +179,36 @@ export const BONUS_LABELS: Record<keyof typeof BONUS_MAX, string> = {
 }
 
 // ─── Side Quests ───────────────────────────────────────────────
+export type QuestDifficulty = 'beginner' | 'intermediate' | 'advanced'
+
+export const DIFFICULTY_LABELS: Record<QuestDifficulty, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+}
+
 export interface SideQuest {
   id: string
-  title: string
-  description: string
+  difficulty: QuestDifficulty | null
   points: number
   status: 'draft' | 'open' | 'closed'
   created_by: string | null
   created_at: string
   opened_at: string | null
   closed_at: string | null
+  // Only present once revealed — OT always sees these; a participant
+  // only sees them for the one quest their team has picked. Absent
+  // (undefined/null) means "still locked, blind".
+  title?: string | null
+  description?: string | null
+  image_paths?: string[]
+}
+
+export interface SideQuestPick {
+  id: string
+  team_id: string
+  quest_id: string
+  picked_at: string
 }
 
 export interface SideQuestSubmission {

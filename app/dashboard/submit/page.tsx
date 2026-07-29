@@ -17,7 +17,7 @@ export default function SubmitPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [team, setTeam] = useState<Team | null>(null)
-  const [, setParticipant] = useState<Participant | null>(null)
+  const [participant, setParticipant] = useState<Participant | null>(null)
   const [existing, setExisting] = useState<Submission | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
@@ -97,6 +97,22 @@ export default function SubmitPage() {
         <Navbar />
         <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />Loading…
+        </div>
+      </div>
+    )
+  }
+
+  if (participant && participant.approval_status !== 'approved') {
+    return (
+      <div className="min-h-screen bg-base font-body text-ink">
+        <Navbar />
+        <div className="flex min-h-[100dvh] items-center justify-center px-4 py-28">
+          <div className={`${card} max-w-md text-center`}>
+            <div className="font-mono text-[0.7rem] uppercase tracking-[0.24em] text-warn">Pending Approval</div>
+            <h1 className="mt-2 font-display text-2xl font-bold text-ink">Not Yet</h1>
+            <p className="mt-2 text-ink-sub">Your registration needs OT approval before your team can submit a project.</p>
+            <Link href="/dashboard" className="mt-5 inline-block rounded-lg border border-line px-5 py-2.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.12em] text-brand hover:bg-brand/5">Return to Dashboard</Link>
+          </div>
         </div>
       </div>
     )

@@ -10,6 +10,8 @@ export interface Team {
   created_at: string
 }
 
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
+
 export interface Participant {
   id: string
   team_id: string
@@ -20,6 +22,7 @@ export interface Participant {
   qr_token: string
   checked_in: boolean
   checked_in_at: string | null
+  approval_status: ApprovalStatus
   created_at: string
   // Joined
   team?: Team

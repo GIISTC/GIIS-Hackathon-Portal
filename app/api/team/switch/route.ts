@@ -24,8 +24,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Team switching is currently locked by the organizers.' }, { status: 403 })
     }
 
-    const { data: me } = await service.from('participants').select('id, team_id, is_team_leader').eq('id', user.id).single()
+    const { data: me } = await service.from('participants').select('id, team_id, is_team_leader, approval_status').eq('id', user.id).single()
     if (!me) return NextResponse.json({ error: 'You must be a registered participant to switch teams.' }, { status: 400 })
+    if (me.approval_status !== 'approved') {
+      return NextResponse.json({ error: 'Your registration is still pending OT approval.' }, { status: 403 })
+    }
 
     const { data: targetTeam } = await service.from('teams').select('*, participants(id)').eq('team_code', code).single()
     if (!targetTeam) return NextResponse.json({ error: 'Invalid team code.' }, { status: 404 })

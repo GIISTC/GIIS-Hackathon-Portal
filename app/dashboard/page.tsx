@@ -50,6 +50,8 @@ export default function DashboardPage() {
       setParticipant(part)
       setTeam(part.team as unknown as Team)
 
+      if (part.approval_status !== 'approved') { setLoading(false); return }
+
       fetch('/api/leaderboard').then((r) => r.json()).then((data) => {
         if (!data?.junior || !data?.senior) return
         const track = (part.team as any)?.track
@@ -183,6 +185,31 @@ export default function DashboardPage() {
               <button type="submit" className={primaryBtn} disabled={switchLoading}>{switchLoading ? 'Repairing…' : 'Complete Registration →'}</button>
               <button type="button" className="py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-ink-dim hover:text-ink" onClick={handleSignOut}>Sign Out</button>
             </form>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (participant && participant.approval_status !== 'approved') {
+    const rejected = participant.approval_status === 'rejected'
+    return (
+      <div className="min-h-screen bg-base font-body text-ink">
+        <Navbar />
+        <div className="flex min-h-[100dvh] items-center justify-center px-4 py-28">
+          <div className="w-full max-w-md rounded-2xl border border-line bg-panel/70 p-8 text-center shadow-panel">
+            <div className={`font-mono text-[0.7rem] uppercase tracking-[0.24em] ${rejected ? 'text-bad' : 'text-warn'}`}>
+              {rejected ? 'Registration Rejected' : 'Pending Approval'}
+            </div>
+            <h1 className="mt-2 font-display text-2xl font-bold text-ink">
+              {rejected ? 'Not Approved' : 'Almost There'}
+            </h1>
+            <p className="mt-2 text-ink-sub">
+              {rejected
+                ? 'An OT member reviewed your registration and it was not approved. If you think this is a mistake, reach out to the organizing team.'
+                : "Your account is verified, but an OT member still needs to approve your registration before you can access the dashboard. This is usually quick — check back shortly."}
+            </p>
+            <button onClick={handleSignOut} className={`${outlineBtn} mt-6 w-full`}>Sign Out</button>
           </div>
         </div>
       </div>

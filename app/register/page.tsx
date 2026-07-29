@@ -184,10 +184,13 @@ export default function RegisterPage() {
                 <div className="mt-2 font-display text-4xl font-black tracking-[0.3em] text-brand">{successCode}</div>
               </div>
             )}
+            <div className="mt-5 rounded-lg border border-warn/30 bg-warn/10 px-4 py-3 text-left text-sm text-warn">
+              Your registration needs to be approved by an OT member before you can access the dashboard — this is usually quick, check back after logging in.
+            </div>
             <div className="mt-5 flex flex-col gap-2 text-left text-sm text-ink-sub">
               <div className="flex items-center gap-2"><span className="text-brand">›</span> July 31 – August 1, 2026</div>
               <div className="flex items-center gap-2"><span className="text-brand">›</span> Log in with your email + the password you set</div>
-              <div className="flex items-center gap-2"><span className="text-brand">›</span> Your QR code lives in your dashboard</div>
+              <div className="flex items-center gap-2"><span className="text-brand">›</span> Your QR code lives in your dashboard once approved</div>
             </div>
             <Link href="/login" className="mt-6 inline-block w-full rounded-lg bg-gradient-to-br from-brand to-brand-blue py-3 font-mono text-xs font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
               Sign In Now →

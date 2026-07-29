@@ -211,6 +211,7 @@ export default function AdminDashboard() {
         {/* Quick links */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[
+            { href: '/admin/approvals', label: 'Approvals', desc: 'Approve or reject new registrations' },
             { href: '/admin/teams', label: 'Manage Teams', desc: 'View all teams and participants' },
             { href: '/admin/checkin', label: 'QR Check-in', desc: 'Scan participant QR codes' },
             { href: '/admin/submissions', label: 'Submissions', desc: 'Browse project submissions' },

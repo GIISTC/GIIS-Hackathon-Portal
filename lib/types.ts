@@ -216,6 +216,20 @@ export interface SideQuestPick {
   picked_at: string
 }
 
+// ─── Daily Check-in ──────────────────────────────────────────
+export const EVENT_DAYS = [
+  { day: 1 as const, label: 'Day 1', date: 'July 31' },
+  { day: 2 as const, label: 'Day 2', date: 'August 1' },
+]
+
+export interface Checkin {
+  id: string
+  participant_id: string
+  event_day: 1 | 2
+  checked_in_at: string
+  checked_in_by: string | null
+}
+
 export interface SideQuestSubmission {
   id: string
   quest_id: string

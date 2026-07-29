@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import type { Participant, Team, Submission, LeaderboardEntry } from '@/lib/types'
-import { MAX_TEAM_SIZE } from '@/lib/types'
+import { MAX_TEAM_SIZE, EVENT_DAYS } from '@/lib/types'
 
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [userEmail, setUserEmail] = useState('')
   const [teamSwitchingEnabled, setTeamSwitchingEnabled] = useState(true)
   const [myRank, setMyRank] = useState<LeaderboardEntry | null>(null)
+  const [checkedInDays, setCheckedInDays] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const load = async () => {
@@ -64,6 +65,9 @@ export default function DashboardPage() {
 
       const { data: mates } = await supabase.from('participants').select('*').eq('team_id', part.team_id).neq('id', user.id)
       setTeammates(mates || [])
+
+      const { data: myCheckins } = await supabase.from('checkins').select('event_day').eq('participant_id', user.id)
+      setCheckedInDays(new Set((myCheckins || []).map((c: any) => c.event_day)))
 
       const { data: sub } = await supabase.from('submissions').select('*').eq('team_id', part.team_id).single()
       setSubmission(sub)
@@ -233,7 +237,13 @@ export default function DashboardPage() {
           <div className={`${card} flex flex-col items-center gap-3 text-center`}>
             <div className="flex w-full items-center justify-between">
               <span className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-brand">Your Pass</span>
-              {participant?.checked_in && <span className="rounded-full bg-good/15 px-2.5 py-1 font-mono text-[0.55rem] font-bold uppercase text-good">✓ Checked In</span>}
+              <div className="flex gap-1.5">
+                {EVENT_DAYS.map((d) => (
+                  <span key={d.day} className={`rounded-full px-2 py-1 font-mono text-[0.5rem] font-bold uppercase ${checkedInDays.has(d.day) ? 'bg-good/15 text-good' : 'bg-line/40 text-ink-dim'}`}>
+                    {checkedInDays.has(d.day) ? '✓ ' : ''}{d.label}
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="relative overflow-hidden rounded-lg border-2 border-brand/30 bg-base">
               {qrDataUrl ? (
@@ -288,7 +298,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {statTile('Team', team?.team_name || '—')}
             {statTile('Members', `${teammates.length + 1} / ${MAX_TEAM_SIZE}`)}
-            {statTile('Check-in', participant?.checked_in ? 'Done' : 'Pending', participant?.checked_in ? 'text-good' : 'text-warn')}
+            {statTile('Check-in', `${checkedInDays.size}/${EVENT_DAYS.length} Days`, checkedInDays.size > 0 ? 'text-good' : 'text-warn')}
             {statTile('Submission', submission ? 'Submitted' : 'Not yet', submission ? 'text-good' : 'text-warn')}
           </div>
 

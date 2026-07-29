@@ -120,8 +120,8 @@ CREATE POLICY "Team can read own picked quest details"
 -- ----------------------------------------------------------------
 -- 6. Sanity check
 -- ----------------------------------------------------------------
-SELECT table_name, row_security
-FROM information_schema.tables
-WHERE table_schema = 'public'
-  AND table_name IN ('side_quests', 'side_quest_details', 'side_quest_picks', 'side_quest_submissions')
-ORDER BY table_name;
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+  AND tablename IN ('side_quests', 'side_quest_details', 'side_quest_picks', 'side_quest_submissions')
+ORDER BY tablename;

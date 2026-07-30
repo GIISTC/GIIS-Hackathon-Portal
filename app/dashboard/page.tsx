@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import type { Participant, Team, Submission, LeaderboardEntry } from '@/lib/types'
 import { MAX_TEAM_SIZE, EVENT_DAYS } from '@/lib/types'
+import { externalUrl } from '@/lib/url'
 
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
@@ -385,9 +386,9 @@ export default function DashboardPage() {
                 <h3 className="font-display text-lg font-bold text-brand-blue">{submission.project_name}</h3>
                 <p className="text-sm text-ink-sub">{submission.description.substring(0, 150)}…</p>
                 <div className="flex flex-wrap gap-2">
-                  {submission.github_url && <a href={submission.github_url} target="_blank" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">GitHub ↗</a>}
-                  {submission.drive_url && <a href={submission.drive_url} target="_blank" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">Drive ↗</a>}
-                  {submission.demo_url && <a href={submission.demo_url} target="_blank" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">Demo ↗</a>}
+                  {externalUrl(submission.github_url) && <a href={externalUrl(submission.github_url)!} target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">GitHub ↗</a>}
+                  {externalUrl(submission.drive_url) && <a href={externalUrl(submission.drive_url)!} target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">Drive ↗</a>}
+                  {externalUrl(submission.demo_url) && <a href={externalUrl(submission.demo_url)!} target="_blank" rel="noreferrer" className="rounded-full border border-line px-4 py-1.5 text-xs text-brand-blue hover:border-brand/50">Demo ↗</a>}
                 </div>
                 <Link href="/dashboard/submit" className={`${outlineBtn} w-fit px-5`}>Edit Submission</Link>
               </div>

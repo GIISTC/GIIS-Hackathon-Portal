@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AdminNav from '@/components/AdminNav'
+import { externalUrl } from '@/lib/url'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
 const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
@@ -146,11 +147,11 @@ export default function AdminSubmissionsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-ink-dim">{s.team?.team_name}</div>
                     <h3 className="mt-0.5 font-display text-base font-bold text-ink">{s.project_name}</h3>
-                    <p className="mt-1 text-sm text-ink-sub">{s.description}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-sub">{s.description}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {s.github_url && <a href={s.github_url} target="_blank" rel="noreferrer" className={linkBtn}>GitHub</a>}
-                      {s.drive_url && <a href={s.drive_url} target="_blank" rel="noreferrer" className={linkBtn}>Drive</a>}
-                      {s.demo_url && <a href={s.demo_url} target="_blank" rel="noreferrer" className={linkBtn}>Demo</a>}
+                      {externalUrl(s.github_url) && <a href={externalUrl(s.github_url)!} target="_blank" rel="noreferrer" className={linkBtn}>GitHub</a>}
+                      {externalUrl(s.drive_url) && <a href={externalUrl(s.drive_url)!} target="_blank" rel="noreferrer" className={linkBtn}>Drive</a>}
+                      {externalUrl(s.demo_url) && <a href={externalUrl(s.demo_url)!} target="_blank" rel="noreferrer" className={linkBtn}>Demo</a>}
                     </div>
                     <p className="mt-2 text-xs text-ink-dim">Submitted {new Date(s.submitted_at).toLocaleString()}</p>
                   </div>

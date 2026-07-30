@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import type { SideQuest, SideQuestSubmission, QuestDifficulty } from '@/lib/types'
 import { DIFFICULTY_LABELS } from '@/lib/types'
+import { externalUrl } from '@/lib/url'
 
 type QuestWithSubmission = SideQuest & { mySubmission: SideQuestSubmission | null; hasImages: boolean }
 type Pick = { quest_id: string; picked_at: string }
@@ -221,7 +222,7 @@ export default function SideQuestsPage() {
                   </span>
                 </div>
               </div>
-              <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-ink-sub">{pickedQuest.description}</p>
+              <p className="mb-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-sub">{pickedQuest.description}</p>
 
               {pickedQuest.hasImages && (
                 <div className="mb-3">
@@ -273,9 +274,9 @@ export default function SideQuestsPage() {
                   {pickedQuest.mySubmission ? (
                     <>
                       <p className="mb-1 text-xs text-ink-dim">Your submitted response:</p>
-                      <p className="whitespace-pre-wrap text-sm text-ink-sub">{pickedQuest.mySubmission.response_text}</p>
+                      <p className="whitespace-pre-wrap break-words text-sm text-ink-sub">{pickedQuest.mySubmission.response_text}</p>
                       {pickedQuest.mySubmission.response_link && (
-                        <a href={pickedQuest.mySubmission.response_link} target="_blank" rel="noreferrer" className="mt-2 inline-block font-mono text-[0.66rem] uppercase tracking-[0.12em] text-brand hover:underline">View submitted link ↗</a>
+                        <a href={externalUrl(pickedQuest.mySubmission.response_link) || '#'} target="_blank" rel="noreferrer" className="mt-2 inline-block font-mono text-[0.66rem] uppercase tracking-[0.12em] text-brand hover:underline">View submitted link ↗</a>
                       )}
                       {pickedQuest.mySubmission.verdict === 'pending' && <div className="mt-3 rounded-lg border border-warn/30 bg-warn/10 px-4 py-2.5 text-sm text-warn">Awaiting grading</div>}
                       {pickedQuest.mySubmission.verdict === 'correct' && <div className="mt-3 rounded-lg border border-good/30 bg-good/10 px-4 py-2.5 text-sm text-good">✓ Correct — +{pickedQuest.points} pts awarded</div>}

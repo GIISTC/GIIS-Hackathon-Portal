@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import AdminNav from '@/components/AdminNav'
 import type { SideQuest, SideQuestSubmission, QuestDifficulty } from '@/lib/types'
 import { DIFFICULTY_LABELS } from '@/lib/types'
+import { externalUrl } from '@/lib/url'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
 const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
@@ -327,7 +328,7 @@ export default function SideQuestsPage() {
                 <span className="rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.6rem] font-bold text-brand">+{q.points} pts</span>
               </div>
               <h3 className="font-display text-base font-bold text-ink">{q.title}</h3>
-              <p className="flex-1 whitespace-pre-wrap text-sm text-ink-sub">{q.description}</p>
+              <p className="flex-1 whitespace-pre-wrap break-words text-sm text-ink-sub">{q.description}</p>
               {(q.image_paths?.length ?? 0) > 0 && (
                 <p className="text-xs text-ink-dim">🖼 {q.image_paths!.length} image{q.image_paths!.length > 1 ? 's' : ''}</p>
               )}
@@ -395,9 +396,9 @@ export default function SideQuestsPage() {
                     {submissions.map((s) => (
                       <tr key={s.id} className="border-b border-line-soft align-top last:border-0">
                         <td className="px-3 py-3 font-semibold text-ink">{(s as any).team?.team_name}</td>
-                        <td className="max-w-xs whitespace-pre-wrap px-3 py-3 text-sm text-ink-sub">{s.response_text}</td>
+                        <td className="max-w-xs whitespace-pre-wrap break-words px-3 py-3 text-sm text-ink-sub">{s.response_text}</td>
                         <td className="px-3 py-3">
-                          {s.response_link ? <a href={s.response_link} target="_blank" rel="noreferrer" className="rounded-md border border-line px-2.5 py-1 font-mono text-[0.6rem] uppercase text-brand hover:bg-brand/5">Link ↗</a> : '–'}
+                          {externalUrl(s.response_link) ? <a href={externalUrl(s.response_link)!} target="_blank" rel="noreferrer" className="rounded-md border border-line px-2.5 py-1 font-mono text-[0.6rem] uppercase text-brand hover:bg-brand/5">Link ↗</a> : '–'}
                         </td>
                         <td className="px-3 py-3">{statusBadge(s.verdict)}</td>
                         <td className="px-3 py-3">

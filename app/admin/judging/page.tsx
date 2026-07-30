@@ -74,6 +74,7 @@ export default function JudgingPage() {
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
   const [poolFilter, setPoolFilter] = useState<'all' | LeaderboardPool>('all')
   const [categoryFilter, setCategoryFilter] = useState<'all' | LeaderboardCategory>('all')
+  const [teamSearch, setTeamSearch] = useState('')
 
   const [leaderboard, setLeaderboard] = useState<AdminLeaderboardData | null>(null)
   const [lbLoading, setLbLoading] = useState(false)
@@ -180,6 +181,12 @@ export default function JudgingPage() {
     if (poolFilter !== 'all' && teamCategory(t) === 'Senior' && teamPool(t) !== poolFilter) return false
     if (poolFilter !== 'all' && teamCategory(t) === 'Junior') return false
     if (categoryFilter !== 'all' && teamCategory(t) !== categoryFilter) return false
+    const q = teamSearch.trim().toLowerCase()
+    if (q && !(
+      t.team_name?.toLowerCase().includes(q) ||
+      t.project_name?.toLowerCase().includes(q) ||
+      t.team_code?.toLowerCase().includes(q)
+    )) return false
     return true
   })
 
@@ -240,6 +247,19 @@ export default function JudgingPage() {
             {/* Team list */}
             <div className={card}>
               <h2 className="font-display text-base font-bold text-ink">Teams</h2>
+              <div className="relative mt-3">
+                <input
+                  type="text"
+                  value={teamSearch}
+                  onChange={(e) => setTeamSearch(e.target.value)}
+                  placeholder="Search team, project, or code…"
+                  className="w-full rounded-lg border border-line bg-panel/60 py-2 pl-3 pr-7 font-body text-sm text-ink outline-none placeholder:text-ink-dim focus:border-brand"
+                />
+                {teamSearch && (
+                  <button type="button" onClick={() => setTeamSearch('')} aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-ink-dim hover:text-ink">✕</button>
+                )}
+              </div>
               <div className="my-3 flex gap-2">
                 <select className={filterSelect} value={poolFilter} onChange={(e) => setPoolFilter(e.target.value as any)}>
                   <option value="all">All Pools</option>
@@ -265,7 +285,11 @@ export default function JudgingPage() {
                     {myScoredTeamIds.has(t.id) && <span className="shrink-0 text-good">✓</span>}
                   </button>
                 ))}
-                {filteredTeams.length === 0 && <p className="py-5 text-center text-sm text-ink-dim">No teams match this filter.</p>}
+                {filteredTeams.length === 0 && (
+                  <p className="py-5 text-center text-sm text-ink-dim">
+                    {teamSearch.trim() ? `No teams match “${teamSearch.trim()}”.` : 'No teams match this filter.'}
+                  </p>
+                )}
               </div>
             </div>
 

@@ -63,6 +63,8 @@ export default function CheckinPage() {
     setRecentCheckins(data || [])
   }
 
+  const processingRef = useRef(false)
+
   const startScanner = async () => {
     if (!scannerRef.current) return
     setIsScanning(true)
@@ -75,33 +77,50 @@ export default function CheckinPage() {
         { fps: 10, qrbox: { width: 250, height: 250 } },
         onScanSuccess, undefined,
       )
-    } catch {
-      setErrorMsg('Camera access denied or not available.')
+    } catch (err: any) {
+      console.error('Camera start failed:', err)
+      setErrorMsg(`Camera access denied or not available.${err?.message ? ` (${err.message})` : ''}`)
       setScanState('error')
       setIsScanning(false)
     }
   }
 
   const stopScanner = async () => {
-    try {
-      if (html5QrRef.current) { await html5QrRef.current.stop(); html5QrRef.current.clear() }
-    } catch {}
+    const instance = html5QrRef.current
+    if (instance) {
+      try { await instance.stop() } catch (err) { console.warn('Scanner stop() warning:', err) }
+      try { instance.clear() } catch (err) { console.warn('Scanner clear() warning:', err) }
+    }
     setIsScanning(false)
     setScanState('idle')
   }
 
   const onScanSuccess = async (decodedText: string) => {
+    if (processingRef.current) return
+    processingRef.current = true
     await stopScanner()
     try {
+      if (!decodedText) throw new Error('Empty scan result — try again with better lighting.')
+
       let token = ''
-      try { const payload = JSON.parse(decodedText); token = payload.token || decodedText } catch { token = decodedText }
-      if (!token) throw new Error('Invalid QR code')
+      try {
+        const payload = JSON.parse(decodedText)
+        token = payload?.token || decodedText
+      } catch {
+        token = decodedText
+      }
+      if (!token) throw new Error('QR code had no readable token.')
 
       const supabase = createClient()
       const { data: participant, error } = await supabase
         .from('participants').select('*, team:teams(team_name)').eq('qr_token', token).single()
 
-      if (error || !participant) { setErrorMsg('Participant not found. Invalid QR code.'); setScanState('error'); return }
+      if (error || !participant) {
+        console.error('Participant lookup failed:', error, 'decodedText:', decodedText)
+        setErrorMsg('Participant not found. Invalid QR code.')
+        setScanState('error')
+        return
+      }
 
       const { data: existing } = await supabase
         .from('checkins').select('checked_in_at').eq('participant_id', participant.id).eq('event_day', day).maybeSingle()
@@ -124,13 +143,25 @@ export default function CheckinPage() {
       setResult(participant)
       setScanState('success')
       loadRecentCheckins()
-    } catch {
-      setErrorMsg('Invalid QR code format.')
+    } catch (err: any) {
+      console.error('Scan processing failed:', err, 'decodedText:', decodedText)
+      setErrorMsg(err?.message ? `Invalid QR code: ${err.message}` : 'Invalid QR code format.')
       setScanState('error')
+    } finally {
+      processingRef.current = false
     }
   }
 
   const reset = () => { setScanState('idle'); setResult(null); setErrorMsg('') }
+
+  const scanNext = async () => {
+    reset()
+    // Give the browser a beat to fully release the previous camera stream
+    // before requesting it again — restarting immediately after stop()
+    // can silently fail on mobile.
+    await new Promise((r) => setTimeout(r, 300))
+    startScanner()
+  }
 
   const resultBox = (border: string, bg: string, accent: string, name: string, meta?: string, status?: string) => (
     <div className={`mt-4 flex items-center gap-3 rounded-lg border ${border} ${bg} p-4`}>
@@ -197,7 +228,7 @@ export default function CheckinPage() {
             {scanState === 'error' && resultBox('border-bad/30', 'bg-bad/[0.08]', 'bg-bad', 'Scan Failed', undefined, errorMsg)}
 
             {scanState !== 'idle' && scanState !== 'scanning' && (
-              <button onClick={reset} className="mt-4 w-full rounded-lg bg-gradient-to-br from-brand to-brand-blue py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-base transition-opacity hover:opacity-90">
+              <button onClick={scanNext} className="mt-4 w-full rounded-lg bg-gradient-to-br from-brand to-brand-blue py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-base transition-opacity hover:opacity-90">
                 Scan Next
               </button>
             )}

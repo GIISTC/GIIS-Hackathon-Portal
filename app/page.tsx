@@ -32,7 +32,7 @@ const CRITERIA = [
 const SIDE_QUEST_COUNT = 5
 
 const STEPS = [
-  { n: '01', title: 'Register', desc: 'Sign up your team of 2–4. Each member gets a unique QR code for event access.' },
+  { n: '01', title: 'Register', desc: 'Sign up solo or as a team of up to 4. Each member gets a unique QR code for event access.' },
   { n: '02', title: 'Build', desc: 'Pick a problem statement and start hacking across five sessions of coding, designing, creating.' },
   { n: '03', title: 'Submit', desc: 'Submit your project through the portal — GitHub repo, drive link, and a description.' },
   { n: '04', title: 'Present', desc: 'Demo to the OT judges. Top teams on each leaderboard take home the glory.' },
@@ -65,7 +65,7 @@ const SCHEDULE = {
 }
 
 const FAQS = [
-  { q: 'Who can participate?', a: 'All GIIS students are welcome. Teams register together as a group of 2–4 members.' },
+  { q: 'Who can participate?', a: 'All GIIS students are welcome. You can enter solo or as a team of up to 4 members.' },
   { q: 'Do I need to know how to code?', a: 'Teams can mix skills — coding, design, research, and presentation all contribute to a winning project.' },
   { q: 'What do I need to bring?', a: 'Your laptop, charger, ideas, and your team. Carry your QR code for check-in and food collection.' },
   { q: 'What can we build?', a: 'Seniors (Grades 9–12) pick a track — App/Web Dev or Game Dev (Scratch only) — and tackle one of the three problem statements above. Juniors (Grades 6–8) have no track restriction and can build anything.' },

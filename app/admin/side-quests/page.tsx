@@ -33,6 +33,7 @@ export default function SideQuestsPage() {
   const [submissions, setSubmissions] = useState<SideQuestSubmission[]>([])
   const [subsLoading, setSubsLoading] = useState(false)
   const [gradingId, setGradingId] = useState<string | null>(null)
+  const [editingVerdictId, setEditingVerdictId] = useState<string | null>(null)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [galleryQuestId, setGalleryQuestId] = useState<string | null>(null)
@@ -130,6 +131,7 @@ export default function SideQuestsPage() {
 
   const viewSubmissions = async (id: string) => {
     setSelectedQuestId(id)
+    setEditingVerdictId(null)
     setSubsLoading(true)
     try {
       const res = await fetch(`/api/admin/side-quests/${id}/submissions`)
@@ -147,6 +149,7 @@ export default function SideQuestsPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verdict }),
       })
       if (!res.ok) { const data = await res.json(); throw new Error(data.error) }
+      setEditingVerdictId(null)
       await viewSubmissions(selectedQuestId)
     } catch (err: any) {
       alert(err.message || 'Failed to grade submission.')
@@ -210,8 +213,9 @@ export default function SideQuestsPage() {
   const statusBadge = (s: string) => {
     const map: Record<string, string> = {
       open: 'bg-good/15 text-good', closed: 'bg-bad/15 text-bad', draft: 'bg-warn/15 text-warn',
+      correct: 'bg-good/15 text-good', incorrect: 'bg-bad/15 text-bad', pending: 'bg-warn/15 text-warn',
     }
-    return <span className={`rounded-full px-2.5 py-1 font-mono text-[0.58rem] font-bold uppercase tracking-wide ${map[s]}`}>{s}</span>
+    return <span className={`rounded-full px-2.5 py-1 font-mono text-[0.58rem] font-bold uppercase tracking-wide ${map[s] || 'bg-line/40 text-ink-dim'}`}>{s}</span>
   }
 
   const difficultyBadge = (d: QuestDifficulty | null | undefined) => {
@@ -397,10 +401,16 @@ export default function SideQuestsPage() {
                         </td>
                         <td className="px-3 py-3">{statusBadge(s.verdict)}</td>
                         <td className="px-3 py-3">
-                          <div className="flex gap-1.5">
-                            <button disabled={gradingId === s.id} onClick={() => grade(s.id, 'correct')} className="rounded-md border border-good/40 px-2.5 py-1 text-good transition-colors hover:bg-good/10">✓</button>
-                            <button disabled={gradingId === s.id} onClick={() => grade(s.id, 'incorrect')} className="rounded-md border border-bad/40 px-2.5 py-1 text-bad transition-colors hover:bg-bad/10">✕</button>
-                          </div>
+                          {s.verdict === 'pending' || editingVerdictId === s.id ? (
+                            <div className="flex gap-1.5">
+                              <button disabled={gradingId === s.id} onClick={() => grade(s.id, 'correct')} className="rounded-md border border-good/40 px-2.5 py-1 text-good transition-colors hover:bg-good/10">✓</button>
+                              <button disabled={gradingId === s.id} onClick={() => grade(s.id, 'incorrect')} className="rounded-md border border-bad/40 px-2.5 py-1 text-bad transition-colors hover:bg-bad/10">✕</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setEditingVerdictId(s.id)} className="font-mono text-[0.6rem] uppercase tracking-wide text-ink-dim hover:text-ink">
+                              Graded — change?
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

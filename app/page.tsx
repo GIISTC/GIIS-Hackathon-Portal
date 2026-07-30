@@ -33,29 +33,34 @@ const SIDE_QUEST_COUNT = 5
 
 const STEPS = [
   { n: '01', title: 'Register', desc: 'Sign up your team of 2–4. Each member gets a unique QR code for event access.' },
-  { n: '02', title: 'Build', desc: 'Pick a problem statement and start hacking. 48 hours of coding, designing, creating.' },
+  { n: '02', title: 'Build', desc: 'Pick a problem statement and start hacking across five sessions of coding, designing, creating.' },
   { n: '03', title: 'Submit', desc: 'Submit your project through the portal — GitHub repo, drive link, and a description.' },
   { n: '04', title: 'Present', desc: 'Demo to the OT judges. Top teams on each leaderboard take home the glory.' },
 ]
 
+const LABS = 'Computer Labs & Level 3 Library'
+const CANTEEN = '3rd Floor Canteen'
+
 const SCHEDULE = {
   day1: [
-    { t: '08:00', e: 'Registration & Check-In' },
-    { t: '09:00', e: 'Opening Ceremony & Problem Release', hot: true },
-    { t: '10:00', e: 'Hacking Begins', hot: true },
-    { t: '13:00', e: 'Lunch Break' },
-    { t: '15:00', e: 'Mentor Sessions — Round 1' },
-    { t: '19:00', e: 'Dinner Break' },
-    { t: '22:00', e: 'Late Night Snacks & Music' },
+    { t: '13:00 – 14:00', e: 'Registrations', v: 'Outside Grand MPH' },
+    { t: '14:00 – 14:45', e: 'Opening Ceremony', v: 'Grand MPH', hot: true },
+    { t: '14:55 – 16:20', e: 'Hacking Session 1', v: LABS, hot: true },
+    { t: '16:25 – 16:40', e: 'Snack Break', v: CANTEEN },
+    { t: '16:45 – 18:55', e: 'Hacking Session 2', v: LABS, hot: true },
+    { t: '19:00 – 19:45', e: 'Dinner', v: CANTEEN },
+    { t: '19:45 – 20:00', e: 'Dispersal' },
   ],
   day2: [
-    { t: '08:00', e: 'Morning & Breakfast' },
-    { t: '10:00', e: 'Mentor Sessions — Round 2' },
-    { t: '12:00', e: 'Submissions Close', hot: true },
-    { t: '13:00', e: 'Judging Begins' },
-    { t: '15:00', e: 'Final Presentations / Demo Day', hot: true },
-    { t: '17:00', e: 'Awards Ceremony', hot: true },
-    { t: '18:00', e: 'Closing & Networking' },
+    { t: '09:00 – 10:30', e: 'Hacking Session 3', v: LABS, hot: true },
+    { t: '10:30 – 10:50', e: 'Snack Break', v: CANTEEN },
+    { t: '10:55 – 12:55', e: 'Hacking Session 4', v: LABS, hot: true },
+    { t: '13:00 – 13:45', e: 'Lunch', v: CANTEEN },
+    { t: '13:45 – 14:45', e: 'Hacking Session 5', v: LABS, hot: true },
+    { t: '14:45 – 17:00', e: 'Project Presentations & Submissions', v: LABS, hot: true },
+    { t: '17:00 – 17:20', e: 'Snack Break', v: CANTEEN },
+    { t: '17:25 – 18:00', e: 'Closing Ceremony', v: 'Grand MPH', hot: true },
+    { t: '18:00 onwards', e: 'Dispersal' },
   ],
 }
 
@@ -100,7 +105,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
             <span className="bg-gradient-to-b from-brand to-brand-deep bg-clip-text text-transparent">2K26</span>
           </h1>
           <p className="mt-8 font-mono text-base uppercase tracking-[0.3em] text-ink-sub sm:text-xl">
-            48 Hours · Unlimited Potential · One Stage
+            Two Days · Unlimited Potential · One Stage
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {['July 31 – August 1, 2026', 'GIIS Smart Campus, Singapore'].map((c) => (
@@ -119,7 +124,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
           </div>
           <div className="mt-16 w-full">
             <p className="mb-5 font-mono text-sm uppercase tracking-[0.24em] text-ink-dim">Countdown to Hackathon</p>
-            <CountdownTimer targetDate="2026-07-31T14:30:00+08:00" />
+            <CountdownTimer targetDate="2026-07-31T15:00:00+08:00" />
           </div>
         </div>
       </section>
@@ -128,8 +133,8 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
       <section className="relative z-10 mx-auto max-w-5xl px-4 py-12">
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { n: '48H', l: 'Build Time' },
-            { n: '4', l: 'Leaderboards' },
+            { n: '2', l: 'Days' },
+            { n: '3', l: 'Leaderboards' },
             { n: '2', l: 'Senior Tracks' },
             { n: '150', l: 'Max Points' },
           ].map((s) => (
@@ -148,7 +153,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
             <p className={eyebrow}>// About the Event</p>
             <h2 className={h2}>What is GIIS Hackathon?</h2>
             <p className="mt-4 leading-relaxed text-ink-sub">
-              The flagship innovation event of the GIIS Tech Club. Over 48 intense hours, teams
+              The flagship innovation event of the GIIS Tech Club. Over two intense days, teams
               ideate, design, and build real tech solutions to real-world problems.
             </p>
             <p className="mt-3 leading-relaxed text-ink-sub">
@@ -183,17 +188,20 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
       {/* ── SCHEDULE ─────────────────────────────────────────── */}
       <section id="schedule" className="relative z-10 mx-auto max-w-6xl px-4 py-20">
         <p className={eyebrow}>// Event Schedule</p>
-        <h2 className={h2}>The 48-Hour Journey</h2>
+        <h2 className={h2}>Flow of Events</h2>
         <div className="mt-8 grid gap-8 md:grid-cols-2">
           {([['Day 1 · July 31', SCHEDULE.day1], ['Day 2 · August 1', SCHEDULE.day2]] as const).map(([label, items]) => (
             <div key={label}>
               <h3 className="mb-4 font-display text-lg font-bold text-brand">{label}</h3>
               <div className="flex flex-col">
                 {items.map((it) => (
-                  <div key={it.t} className="flex items-center gap-4 border-b border-line-soft py-3 last:border-0">
-                    <span className="w-14 shrink-0 font-mono text-sm text-ink-dim [font-variant-numeric:tabular-nums]">{it.t}</span>
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${it.hot ? 'bg-brand shadow-glow' : 'bg-line'}`} />
-                    <span className={`text-sm ${it.hot ? 'font-medium text-brand' : 'text-ink-sub'}`}>{it.e}</span>
+                  <div key={it.t} className="flex items-start gap-3 border-b border-line-soft py-3 last:border-0 sm:gap-4">
+                    <span className="w-[6.5rem] shrink-0 font-mono text-[0.78rem] text-ink-dim [font-variant-numeric:tabular-nums]">{it.t}</span>
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${it.hot ? 'bg-brand shadow-glow' : 'bg-line'}`} />
+                    <span className="min-w-0">
+                      <span className={`block text-sm ${it.hot ? 'font-medium text-brand' : 'text-ink-sub'}`}>{it.e}</span>
+                      {'v' in it && it.v && <span className="mt-0.5 block text-xs text-ink-dim">{it.v}</span>}
+                    </span>
                   </div>
                 ))}
               </div>

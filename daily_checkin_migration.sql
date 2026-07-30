@@ -66,7 +66,21 @@ CREATE POLICY "OT can manage checkins"
   USING (is_ot())
   WITH CHECK (is_ot());
 
+-- Any judge can undo a check-in (the admin Attendance page lets you toggle
+-- a day off). Without this, a non-OT judge's un-check silently does nothing.
+DROP POLICY IF EXISTS "Judges can remove checkins" ON checkins;
+CREATE POLICY "Judges can remove checkins"
+  ON checkins FOR DELETE
+  USING (is_judge());
+
 -- ----------------------------------------------------------------
--- 3. Sanity check
+-- 3. Force PostgREST to pick up the new table immediately, otherwise
+--    the API keeps returning "Could not find the table
+--    'public.checkins' in the schema cache".
+-- ----------------------------------------------------------------
+NOTIFY pgrst, 'reload schema';
+
+-- ----------------------------------------------------------------
+-- 4. Sanity check — must return one row: checkins | true
 -- ----------------------------------------------------------------
 SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' AND tablename = 'checkins';

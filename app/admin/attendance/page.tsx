@@ -20,12 +20,26 @@ export default function AdminAttendancePage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const loadData = async () => {
     const supabase = createClient()
-    const { data: parts } = await supabase
+    const { data: parts, error: partsError } = await supabase
       .from('participants').select('*, team:teams(team_name)').order('full_name')
-    const { data: cins } = await supabase.from('checkins').select('*')
+    const { data: cins, error: cinsError } = await supabase.from('checkins').select('*')
+
+    const failure = partsError || cinsError
+    if (failure) {
+      console.error('Attendance load failed:', failure)
+      setLoadError(
+        failure.message?.includes('schema cache')
+          ? 'The check-in database table is missing — run the daily check-in migration in Supabase.'
+          : failure.message,
+      )
+    } else {
+      setLoadError(null)
+    }
+
     setParticipants(parts || [])
     setCheckins(cins || [])
   }
@@ -115,6 +129,13 @@ export default function AdminAttendancePage() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        {loadError && (
+          <div className="mb-4 rounded-lg border border-bad/30 bg-bad/[0.08] p-4">
+            <div className="font-semibold text-ink">Could not load attendance</div>
+            <div className="mt-0.5 text-sm text-ink-sub">{loadError}</div>
+          </div>
+        )}
 
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className={card}>

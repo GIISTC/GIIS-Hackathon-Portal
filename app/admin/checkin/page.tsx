@@ -35,6 +35,15 @@ export default function CheckinPage() {
   const [judgeId, setJudgeId] = useState('')
   const [day, setDay] = useState<EventDay>(defaultDay())
 
+  // The scan callback is handed to html5-qrcode once, at scanner-start
+  // time, so it closes over whatever `day`/`judgeId` were at that moment.
+  // Reading them through refs keeps a long-running camera session from
+  // checking people into a stale day.
+  const dayRef = useRef<EventDay>(day)
+  const judgeIdRef = useRef('')
+  useEffect(() => { dayRef.current = day }, [day])
+  useEffect(() => { judgeIdRef.current = judgeId }, [judgeId])
+
   useEffect(() => {
     const init = async () => {
       const supabase = createClient()
@@ -47,6 +56,16 @@ export default function CheckinPage() {
     }
     init()
   }, [router])
+
+  // Release the camera if the page unmounts mid-scan.
+  useEffect(() => {
+    return () => {
+      const instance = html5QrRef.current
+      if (instance) {
+        try { instance.stop().catch(() => {}) } catch {}
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (judgeId) loadRecentCheckins()
@@ -98,6 +117,7 @@ export default function CheckinPage() {
   const onScanSuccess = async (decodedText: string) => {
     if (processingRef.current) return
     processingRef.current = true
+    const scanDay = dayRef.current
     await stopScanner()
     try {
       if (!decodedText) throw new Error('Empty scan result — try again with better lighting.')
@@ -109,21 +129,28 @@ export default function CheckinPage() {
       } catch {
         token = decodedText
       }
+      token = String(token).trim()
       if (!token) throw new Error('QR code had no readable token.')
 
       const supabase = createClient()
       const { data: participant, error } = await supabase
-        .from('participants').select('*, team:teams(team_name)').eq('qr_token', token).single()
+        .from('participants').select('*, team:teams(team_name)').eq('qr_token', token).maybeSingle()
 
-      if (error || !participant) {
+      if (error) {
         console.error('Participant lookup failed:', error, 'decodedText:', decodedText)
-        setErrorMsg('Participant not found. Invalid QR code.')
+        setErrorMsg(`Lookup failed: ${error.message}`)
+        setScanState('error')
+        return
+      }
+      if (!participant) {
+        setErrorMsg('Participant not found — this QR code does not match any registered participant.')
         setScanState('error')
         return
       }
 
-      const { data: existing } = await supabase
-        .from('checkins').select('checked_in_at').eq('participant_id', participant.id).eq('event_day', day).maybeSingle()
+      const { data: existing, error: existingError } = await supabase
+        .from('checkins').select('checked_in_at').eq('participant_id', participant.id).eq('event_day', scanDay).maybeSingle()
+      if (existingError) throw existingError
 
       if (existing) {
         setResult({ ...participant, lastCheckinAt: existing.checked_in_at })
@@ -132,8 +159,19 @@ export default function CheckinPage() {
       }
 
       const { error: insertError } = await supabase
-        .from('checkins').insert({ participant_id: participant.id, event_day: day, checked_in_by: judgeId })
-      if (insertError) throw insertError
+        .from('checkins').insert({ participant_id: participant.id, event_day: scanDay, checked_in_by: judgeIdRef.current || null })
+
+      if (insertError) {
+        // 23505 = unique violation on (participant_id, event_day): someone
+        // else scanned them a moment ago. That's a successful "already in",
+        // not a failure.
+        if (insertError.code === '23505') {
+          setResult({ ...participant, lastCheckinAt: null })
+          setScanState('already')
+          return
+        }
+        throw insertError
+      }
 
       // Best-effort convenience flag — "checked in at least once" — used
       // by dashboard/admin badges elsewhere that don't care which day.
@@ -145,7 +183,12 @@ export default function CheckinPage() {
       loadRecentCheckins()
     } catch (err: any) {
       console.error('Scan processing failed:', err, 'decodedText:', decodedText)
-      setErrorMsg(err?.message ? `Invalid QR code: ${err.message}` : 'Invalid QR code format.')
+      const missingTable = err?.message?.includes('schema cache') || err?.code === 'PGRST205'
+      setErrorMsg(
+        missingTable
+          ? 'The check-in database table is missing — the daily check-in migration has not been run in Supabase yet.'
+          : err?.message || 'Could not record check-in.',
+      )
       setScanState('error')
     } finally {
       processingRef.current = false
@@ -185,7 +228,7 @@ export default function CheckinPage() {
           </div>
           <div className="flex gap-2">
             {EVENT_DAYS.map((d) => (
-              <button key={d.day} onClick={() => { setDay(d.day); reset() }}
+              <button key={d.day} onClick={async () => { if (isScanning) await stopScanner(); setDay(d.day); reset() }}
                 className={`rounded-lg px-4 py-2 font-mono text-[0.7rem] font-bold uppercase tracking-[0.12em] transition-colors ${
                   day === d.day ? 'bg-gradient-to-br from-brand to-brand-blue text-base' : 'border border-line text-brand hover:bg-brand/5'
                 }`}>
@@ -200,14 +243,15 @@ export default function CheckinPage() {
           <div className={card}>
             <h2 className="mb-3 font-display text-base font-bold text-ink">Scanner — {EVENT_DAYS.find((d) => d.day === day)?.label}</h2>
             <div className="relative aspect-square overflow-hidden rounded-lg border border-line bg-base">
-              <div id="qr-scanner-region" ref={scannerRef} className="h-full w-full">
-                {scanState === 'idle' && (
-                  <div className="flex h-full flex-col items-center justify-center gap-3 text-ink-dim">
-                    <div className="h-12 w-12 rounded-lg border border-dashed border-line" />
-                    <p className="font-mono text-xs uppercase tracking-[0.14em]">Camera preview</p>
-                  </div>
-                )}
-              </div>
+              {/* html5-qrcode injects/clears DOM inside this node, so React must
+                  never own children here — the placeholder is a sibling overlay. */}
+              <div id="qr-scanner-region" ref={scannerRef} className="h-full w-full" />
+              {!isScanning && (
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 text-ink-dim">
+                  <div className="h-12 w-12 rounded-lg border border-dashed border-line" />
+                  <p className="font-mono text-xs uppercase tracking-[0.14em]">Camera preview</p>
+                </div>
+              )}
             </div>
 
             <div className="mt-4">

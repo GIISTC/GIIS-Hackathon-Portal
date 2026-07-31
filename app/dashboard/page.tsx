@@ -64,7 +64,7 @@ export default function DashboardPage() {
         }
       }).catch(() => {})
 
-      const { data: mates } = await supabase.from('participants').select('*').eq('team_id', part.team_id).neq('id', user.id)
+      const { data: mates } = await supabase.from('participants').select('*').eq('team_id', part.team_id).neq('id', user.id).eq('approval_status', 'approved')
       setTeammates(mates || [])
 
       const { data: myCheckins } = await supabase.from('checkins').select('event_day').eq('participant_id', user.id)

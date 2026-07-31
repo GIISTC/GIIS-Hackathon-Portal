@@ -38,22 +38,28 @@ export default function AdminDashboard() {
 
       fetch('/api/admin/settings').then((res) => res.json()).then((data) => setSettings(data))
 
-      const [teams, participants, checkedIn, submissions] = await Promise.all([
+      // Check-ins come from the `checkins` table, not participants.checked_in
+      // — that flag only ever gets set, so undoing a check-in on the
+      // Attendance page would otherwise leave this count too high. One
+      // participant checked in on both days still counts once.
+      const [teams, participants, checkins, submissions] = await Promise.all([
         supabase.from('teams').select('id', { count: 'exact', head: true }),
-        supabase.from('participants').select('id', { count: 'exact', head: true }),
-        supabase.from('participants').select('id', { count: 'exact', head: true }).eq('checked_in', true),
+        supabase.from('participants').select('id', { count: 'exact', head: true }).eq('approval_status', 'approved'),
+        supabase.from('checkins').select('participant_id'),
         supabase.from('submissions').select('id', { count: 'exact', head: true }),
       ])
 
       setStats({
         totalTeams: teams.count || 0,
         totalParticipants: participants.count || 0,
-        checkedIn: checkedIn.count || 0,
+        checkedIn: new Set((checkins.data || []).map((c: any) => c.participant_id)).size,
         submissions: submissions.count || 0,
       })
 
       const { data: rt } = await supabase
-        .from('teams').select('*, participants(count)').order('created_at', { ascending: false }).limit(5)
+        .from('teams').select('*, participants(count)')
+        .eq('participants.approval_status', 'approved')
+        .order('created_at', { ascending: false }).limit(5)
       setRecentTeams(rt || [])
       setLoading(false)
     }

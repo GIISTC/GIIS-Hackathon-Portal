@@ -25,7 +25,7 @@ export default function AdminAttendancePage() {
   const loadData = async () => {
     const supabase = createClient()
     const { data: parts, error: partsError } = await supabase
-      .from('participants').select('*, team:teams(team_name)').order('full_name')
+      .from('participants').select('*, team:teams(team_name)').eq('approval_status', 'approved').order('full_name')
     const { data: cins, error: cinsError } = await supabase.from('checkins').select('*')
 
     const failure = partsError || cinsError
@@ -88,6 +88,16 @@ export default function AdminAttendancePage() {
       if (isCheckedIn) {
         const { error } = await supabase.from('checkins').delete().eq('participant_id', participantId).eq('event_day', day)
         if (error) throw error
+
+        // participants.checked_in means "checked in at least once" and is
+        // what the Teams page badge reads. If this was their last remaining
+        // check-in, clear it so the badge doesn't linger.
+        const { data: left } = await supabase
+          .from('checkins').select('id').eq('participant_id', participantId).limit(1)
+        if (!left || left.length === 0) {
+          await supabase.from('participants')
+            .update({ checked_in: false, checked_in_at: null }).eq('id', participantId)
+        }
       } else {
         const { error } = await supabase.from('checkins').insert({ participant_id: participantId, event_day: day, checked_in_by: judgeId })
         if (error) throw error

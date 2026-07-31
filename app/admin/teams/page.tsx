@@ -32,7 +32,9 @@ export default function AdminTeamsPage() {
   const loadTeams = async () => {
     const supabase = createClient()
     const { data: teamsData } = await supabase
-      .from('teams').select('*, participants(*)').order('created_at', { ascending: false })
+      .from('teams').select('*, participants(*)')
+      .eq('participants.approval_status', 'approved')
+      .order('created_at', { ascending: false })
     setTeams(teamsData || [])
   }
 

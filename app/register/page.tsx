@@ -40,7 +40,7 @@ export default function RegisterPage() {
   const [teamName, setTeamName] = useState('')
   const [track, setTrack] = useState('')
   const [joinCode, setJoinCode] = useState('')
-  const [joinPreview, setJoinPreview] = useState<{ team_name: string; track: string | null } | null>(null)
+  const [joinPreview, setJoinPreview] = useState<{ team_name: string; track: string | null; member_count: number; is_full: boolean } | null>(null)
   const [joinPreviewError, setJoinPreviewError] = useState<string | null>(null)
   const [memberCount, setMemberCount] = useState(1)
   const [members, setMembers] = useState<Member[]>([emptyMember()])
@@ -57,12 +57,18 @@ export default function RegisterPage() {
   const lookupJoinTeam = async () => {
     setJoinPreview(null)
     setJoinPreviewError(null)
-    const code = joinCode.trim().toUpperCase()
-    if (code.length !== 6) return
-    const supabase = createClient()
-    const { data: team, error } = await supabase.from('teams').select('team_name, track').eq('team_code', code).single()
-    if (error || !team) { setJoinPreviewError('No team found with this code.'); return }
-    setJoinPreview(team)
+    const code = joinCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+    if (!code) return
+    try {
+      const res = await fetch('/api/register/lookup-team', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setJoinPreviewError(data.error || 'Could not look up that code.'); return }
+      setJoinPreview(data)
+    } catch {
+      setJoinPreviewError('Network error while checking that code. Check your connection and try again.')
+    }
   }
 
   const validate = (): string | null => {
@@ -119,10 +125,15 @@ export default function RegisterPage() {
         finalTeamName = team.team_name
         setSuccessCode(teamCode)
       } else {
-        const { data: team, error: teamError } = await supabase
-          .from('teams').select('*, participants(id)').eq('team_code', joinCode.trim().toUpperCase()).single()
-        if (teamError || !team) throw new Error('Invalid Team Code. Please check and try again.')
-        if (team.participants.length >= MAX_TEAM_SIZE) throw new Error(`This team is already full (max ${MAX_TEAM_SIZE} members).`)
+        const lookupRes = await fetch('/api/register/lookup-team', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: joinCode }),
+        })
+        const team = await lookupRes.json()
+        if (!lookupRes.ok) throw new Error(team.error || 'Invalid Team Code. Please check and try again.')
+        if (team.member_count + activeMembers.length > MAX_TEAM_SIZE) {
+          throw new Error(`That team has ${team.member_count}/${MAX_TEAM_SIZE} members — not enough room.`)
+        }
         finalTeamId = team.id
         finalTeamName = team.team_name
       }
@@ -246,16 +257,27 @@ export default function RegisterPage() {
             ) : (
               <div>
                 <label className={labelCls} htmlFor="join-code">Enter Team Code *</label>
-                <input id="join-code" type="text" maxLength={6} required
+                <input id="join-code" type="text" maxLength={16} required
+                  autoCapitalize="characters" autoCorrect="off" spellCheck={false}
                   className={`${inputCls} text-center text-2xl font-bold uppercase tracking-[0.3em]`}
                   placeholder="XJ29B1" value={joinCode}
                   onChange={(e) => { setJoinCode(e.target.value); setJoinPreview(null); setJoinPreviewError(null) }}
                   onBlur={lookupJoinTeam} />
                 <span className="mt-1 block text-xs text-ink-dim">Ask your team leader for the 6-character code.</span>
                 {joinPreview && (
-                  <div className="mt-3 rounded-lg border border-brand/25 bg-brand/[0.06] px-4 py-3 text-sm text-ink-sub">
-                    Joining <strong className="text-ink">{joinPreview.team_name}</strong>
-                    {joinPreview.track && <> · Track: <strong className="text-brand">{joinPreview.track}</strong></>}
+                  <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${joinPreview.is_full ? 'border-bad/30 bg-bad/10 text-[#fca5a5]' : 'border-brand/25 bg-brand/[0.06] text-ink-sub'}`}>
+                    {joinPreview.is_full ? (
+                      <>
+                        <strong className="text-ink">{joinPreview.team_name}</strong> is already full
+                        ({joinPreview.member_count}/{MAX_TEAM_SIZE} members).
+                      </>
+                    ) : (
+                      <>
+                        Joining <strong className="text-ink">{joinPreview.team_name}</strong>
+                        {joinPreview.track && <> · Track: <strong className="text-brand">{joinPreview.track}</strong></>}
+                        {' '}· {joinPreview.member_count}/{MAX_TEAM_SIZE} members
+                      </>
+                    )}
                   </div>
                 )}
                 {joinPreviewError && (

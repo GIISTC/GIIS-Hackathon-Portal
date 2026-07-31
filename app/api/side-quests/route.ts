@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 // GET: participant-facing quest list. Every open/closed quest is listed so
 // the team can see the difficulty tiers on offer, but title/description/
-// image_paths only come through for the ONE quest the team has picked —
+// files only come through for the ONE quest the team has picked —
 // side_quest_details RLS blocks the embed for everything else, so this
 // isn't app-layer hiding, the database itself won't return the content.
 export async function GET() {
@@ -19,7 +19,7 @@ export async function GET() {
 
   const { data: quests, error } = await supabase
     .from('side_quests')
-    .select('id, difficulty, points, status, created_at, opened_at, closed_at, details:side_quest_details(title, description, image_paths)')
+    .select('id, difficulty, points, status, created_at, opened_at, closed_at, details:side_quest_details(title, description, files)')
     .in('status', ['open', 'closed'])
     .order('created_at', { ascending: false })
 
@@ -46,8 +46,8 @@ export async function GET() {
     closed_at: q.closed_at,
     title: q.details?.title ?? null,
     description: q.details?.description ?? null,
-    image_paths: q.details?.image_paths ?? [],
-    hasImages: (q.details?.image_paths?.length ?? 0) > 0,
+    files: q.details?.files ?? [],
+    hasFiles: (q.details?.files?.length ?? 0) > 0,
     mySubmission: submissions.find((s) => s.quest_id === q.id) || null,
   }))
 

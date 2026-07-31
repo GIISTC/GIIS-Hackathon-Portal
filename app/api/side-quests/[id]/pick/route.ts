@@ -39,13 +39,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
     }
 
     const { data: details } = await supabase
-      .from('side_quest_details').select('title, description, image_paths').eq('quest_id', params.id).single()
+      .from('side_quest_details').select('title, description, files').eq('quest_id', params.id).single()
 
     return NextResponse.json({
       quest_id: params.id,
       title: details?.title ?? null,
       description: details?.description ?? null,
-      image_paths: details?.image_paths ?? [],
+      files: details?.files ?? [],
     })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })

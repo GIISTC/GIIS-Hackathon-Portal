@@ -1,14 +1,15 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import type { QuestFile } from '@/lib/types'
 
 const BUCKET = 'quest-images'
 const SIGNED_URL_TTL = 60 * 60 // 1 hour
 
-// GET: signed URLs for a quest's images. Only granted to OT, or to a
-// participant whose team has already picked this exact quest — checked
-// here (not just relying on side_quest_details RLS) because Storage
-// access itself isn't RLS-protected; the bucket is private and every
-// read has to go through this gate.
+// GET: signed download URLs for a quest's attachments. Only granted to
+// OT, or to a participant whose team has already picked this exact quest
+// — checked here (not just relying on side_quest_details RLS) because
+// Storage access itself isn't RLS-protected; the bucket is private and
+// every read has to go through this gate.
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -29,15 +30,24 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 
   const { data: details, error } = await supabase
-    .from('side_quest_details').select('image_paths').eq('quest_id', params.id).single()
+    .from('side_quest_details').select('files').eq('quest_id', params.id).single()
   if (error || !details) return NextResponse.json({ error: 'Quest not found' }, { status: 404 })
 
-  const paths: string[] = details.image_paths || []
-  if (paths.length === 0) return NextResponse.json({ urls: [] })
+  const files: QuestFile[] = details.files || []
+  if (files.length === 0) return NextResponse.json({ files: [] })
 
   const service = createServiceClient()
-  const { data: signed, error: signError } = await service.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_TTL)
-  if (signError) return NextResponse.json({ error: signError.message }, { status: 500 })
 
-  return NextResponse.json({ urls: (signed || []).map((s) => s.signedUrl).filter(Boolean) })
+  // Signed individually rather than via createSignedUrls, so each URL can
+  // carry its own `download` filename — that sets Content-Disposition so
+  // the browser saves "solution.py" instead of the UUID storage key.
+  const signed = await Promise.all(
+    files.map(async (f) => {
+      const { data } = await service.storage
+        .from(BUCKET).createSignedUrl(f.path, SIGNED_URL_TTL, { download: f.name })
+      return data?.signedUrl ? { path: f.path, name: f.name, size: f.size, type: f.type, url: data.signedUrl } : null
+    }),
+  )
+
+  return NextResponse.json({ files: signed.filter(Boolean) })
 }

@@ -16,7 +16,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from('side_quests')
-    .select('*, details:side_quest_details(title, description, image_paths)')
+    .select('*, details:side_quest_details(title, description, files)')
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -26,7 +26,7 @@ export async function GET() {
     created_by: q.created_by, created_at: q.created_at, opened_at: q.opened_at, closed_at: q.closed_at,
     title: q.details?.title ?? null,
     description: q.details?.description ?? null,
-    image_paths: q.details?.image_paths ?? [],
+    files: q.details?.files ?? [],
   }))
 
   return NextResponse.json(quests)
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       .single()
     if (detailsError) throw detailsError
 
-    return NextResponse.json({ ...quest, title: details.title, description: details.description, image_paths: details.image_paths })
+    return NextResponse.json({ ...quest, title: details.title, description: details.description, files: details.files ?? [] })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

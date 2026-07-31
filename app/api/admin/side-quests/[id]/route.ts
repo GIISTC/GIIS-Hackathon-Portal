@@ -55,11 +55,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       if (error) throw error
       details = data
     } else {
-      const { data } = await supabase.from('side_quest_details').select('title, description, image_paths').eq('quest_id', params.id).single()
+      const { data } = await supabase.from('side_quest_details').select('title, description, files').eq('quest_id', params.id).single()
       details = data
     }
 
-    return NextResponse.json({ ...quest, title: details?.title ?? null, description: details?.description ?? null, image_paths: details?.image_paths ?? [] })
+    return NextResponse.json({ ...quest, title: details?.title ?? null, description: details?.description ?? null, files: details?.files ?? [] })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

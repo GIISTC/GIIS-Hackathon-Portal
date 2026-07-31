@@ -9,12 +9,24 @@ import type { SideQuest, SideQuestSubmission, QuestDifficulty } from '@/lib/type
 import { DIFFICULTY_LABELS } from '@/lib/types'
 import { externalUrl } from '@/lib/url'
 
-type QuestWithSubmission = SideQuest & { mySubmission: SideQuestSubmission | null; hasImages: boolean }
+type QuestWithSubmission = SideQuest & { mySubmission: SideQuestSubmission | null; hasFiles: boolean }
 type Pick = { quest_id: string; picked_at: string }
 
 const card = 'rounded-card border border-line bg-panel/70 p-5 shadow-panel'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
 const labelCls = 'mb-1.5 block font-mono text-[0.6rem] uppercase tracking-[0.12em] text-brand'
+
+const fileExt = (name: string) => {
+  const ext = name.includes('.') ? name.split('.').pop()! : ''
+  return (ext || 'file').slice(0, 4).toUpperCase()
+}
+
+const formatBytes = (bytes: number) => {
+  if (!bytes) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 const DIFFICULTY_STYLE: Record<QuestDifficulty, { badge: string; blurb: string }> = {
   beginner: { badge: 'bg-good/15 text-good', blurb: 'Lower risk — should be approachable for most teams.' },
@@ -34,9 +46,8 @@ export default function SideQuestsPage() {
   const [saving, setSaving] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const [images, setImages] = useState<string[]>([])
-  const [imagesLoading, setImagesLoading] = useState(false)
-  const [slide, setSlide] = useState(0)
+  const [questFiles, setQuestFiles] = useState<{ path: string; name: string; size: number; url: string }[]>([])
+  const [filesLoading, setFilesLoading] = useState(false)
   const [approvalStatus, setApprovalStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
 
   const load = async () => {
@@ -48,7 +59,7 @@ export default function SideQuestsPage() {
       const mine = data.myPick ? data.quests.find((q) => q.id === data.myPick!.quest_id) : null
       if (mine) {
         setDraft({ response_text: mine.mySubmission?.response_text || '', response_link: mine.mySubmission?.response_link || '' })
-        if (mine.hasImages) loadImages(mine.id)
+        if (mine.hasFiles) loadFiles(mine.id)
       }
     }
     setLoading(false)
@@ -67,21 +78,15 @@ export default function SideQuestsPage() {
     init()
   }, [router])
 
-  const loadImages = async (questId: string) => {
-    setImagesLoading(true)
+  const loadFiles = async (questId: string) => {
+    setFilesLoading(true)
     try {
-      const res = await fetch(`/api/side-quests/${questId}/images`)
+      const res = await fetch(`/api/side-quests/${questId}/files`)
       const data = await res.json()
-      if (res.ok) { setImages(data.urls || []); setSlide(0) }
+      if (res.ok) setQuestFiles(data.files || [])
     } catch {}
-    setImagesLoading(false)
+    setFilesLoading(false)
   }
-
-  useEffect(() => {
-    if (images.length < 2) return
-    const id = setInterval(() => setSlide((s) => (s + 1) % images.length), 4000)
-    return () => clearInterval(id)
-  }, [images])
 
   const choose = async (questId: string, difficulty: QuestDifficulty) => {
     if (!confirm(`Lock in the ${DIFFICULTY_LABELS[difficulty]} quest? You won't be able to see or attempt any other quest after this — this choice is final.`)) return
@@ -224,31 +229,32 @@ export default function SideQuestsPage() {
               </div>
               <p className="mb-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-sub">{pickedQuest.description}</p>
 
-              {pickedQuest.hasImages && (
-                <div className="mb-3">
-                  {imagesLoading ? (
+              {pickedQuest.hasFiles && (
+                <div className="mb-4">
+                  <p className="mb-2 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-brand">Quest Files</p>
+                  {filesLoading ? (
                     <div className="flex justify-center py-4"><div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" /></div>
-                  ) : images.length > 0 ? (
-                    <div className="relative overflow-hidden rounded-lg border border-line bg-base">
-                      <a href={images[slide]} target="_blank" rel="noreferrer" className="block aspect-video">
-                        <img src={images[slide]} alt="" className="h-full w-full object-contain" />
-                      </a>
-                      {images.length > 1 && (
-                        <>
-                          <button onClick={() => setSlide((s) => (s - 1 + images.length) % images.length)} aria-label="Previous image"
-                            className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-base/70 px-2.5 py-1.5 text-ink backdrop-blur transition-colors hover:bg-base/90 hover:text-brand">‹</button>
-                          <button onClick={() => setSlide((s) => (s + 1) % images.length)} aria-label="Next image"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-base/70 px-2.5 py-1.5 text-ink backdrop-blur transition-colors hover:bg-base/90 hover:text-brand">›</button>
-                          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1.5">
-                            {images.map((_, i) => (
-                              <button key={i} onClick={() => setSlide(i)} aria-label={`Go to image ${i + 1}`}
-                                className={`h-1.5 w-1.5 rounded-full transition-colors ${i === slide ? 'bg-brand' : 'bg-ink-dim/60'}`} />
-                            ))}
-                          </div>
-                        </>
-                      )}
+                  ) : questFiles.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {questFiles.map((f) => (
+                        <a key={f.path} href={f.url} download={f.name}
+                          className="group flex items-center gap-3 rounded-lg border border-line bg-base/40 px-3 py-2.5 transition-colors hover:border-brand/50 hover:bg-brand/[0.04]">
+                          <span className="flex h-9 w-11 shrink-0 items-center justify-center rounded border border-line bg-panel/60 font-mono text-[0.55rem] font-bold uppercase text-brand">
+                            {fileExt(f.name)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-medium text-ink">{f.name}</span>
+                            <span className="block font-mono text-[0.6rem] text-ink-dim">{formatBytes(f.size)}</span>
+                          </span>
+                          <span className="shrink-0 rounded-lg border border-brand/40 px-3 py-1.5 font-mono text-[0.58rem] font-bold uppercase tracking-[0.1em] text-brand transition-colors group-hover:bg-brand group-hover:text-base">
+                            Download
+                          </span>
+                        </a>
+                      ))}
                     </div>
-                  ) : null}
+                  ) : (
+                    <p className="text-sm text-ink-dim">No files attached to this quest.</p>
+                  )}
                 </div>
               )}
 

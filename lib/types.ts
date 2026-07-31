@@ -192,6 +192,16 @@ export const DIFFICULTY_LABELS: Record<QuestDifficulty, string> = {
   advanced: 'Advanced',
 }
 
+// An attachment on a quest. Any file type is allowed — the name is the
+// original filename shown to participants, path is the private storage
+// key that only ever gets resolved into a short-lived signed URL.
+export interface QuestFile {
+  path: string
+  name: string
+  size: number
+  type?: string
+}
+
 export interface SideQuest {
   id: string
   difficulty: QuestDifficulty | null
@@ -206,7 +216,7 @@ export interface SideQuest {
   // (undefined/null) means "still locked, blind".
   title?: string | null
   description?: string | null
-  image_paths?: string[]
+  files?: QuestFile[]
 }
 
 export interface SideQuestPick {

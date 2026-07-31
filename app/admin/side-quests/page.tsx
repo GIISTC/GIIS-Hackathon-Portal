@@ -17,6 +17,18 @@ const smBtn = 'rounded-lg px-3 py-1.5 font-mono text-[0.62rem] font-bold upperca
 
 const DIFFICULTIES: QuestDifficulty[] = ['beginner', 'intermediate', 'advanced']
 
+const fileExt = (name: string) => {
+  const ext = name.includes('.') ? name.split('.').pop()! : ''
+  return (ext || 'file').slice(0, 4).toUpperCase()
+}
+
+const formatBytes = (bytes: number) => {
+  if (!bytes) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export default function SideQuestsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -38,7 +50,7 @@ export default function SideQuestsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const [galleryQuestId, setGalleryQuestId] = useState<string | null>(null)
-  const [galleryUrls, setGalleryUrls] = useState<{ path: string; url: string }[]>([])
+  const [questFiles, setQuestFiles] = useState<{ path: string; name: string; size: number; type?: string; url: string }[]>([])
   const [galleryLoading, setGalleryLoading] = useState(false)
   const [uploadingFor, setUploadingFor] = useState<string | null>(null)
 
@@ -80,11 +92,11 @@ export default function SideQuestsPage() {
 
       if (files.length > 0) {
         const fd = new FormData()
-        files.forEach((f) => fd.append('images', f))
-        const imgRes = await fetch(`/api/admin/side-quests/${data.id}/images`, { method: 'POST', body: fd })
-        if (!imgRes.ok) {
-          const imgData = await imgRes.json()
-          throw new Error(`Quest created, but image upload failed: ${imgData.error}`)
+        files.forEach((f) => fd.append('files', f))
+        const upRes = await fetch(`/api/admin/side-quests/${data.id}/files`, { method: 'POST', body: fd })
+        if (!upRes.ok) {
+          const upData = await upRes.json()
+          throw new Error(`Quest created, but file upload failed: ${upData.error}`)
         }
       }
 
@@ -158,54 +170,52 @@ export default function SideQuestsPage() {
     setGradingId(null)
   }
 
-  const fetchGallery = async (id: string) => {
+  const fetchFiles = async (id: string) => {
     setGalleryLoading(true)
     try {
-      const res = await fetch(`/api/side-quests/${id}/images`)
+      const res = await fetch(`/api/side-quests/${id}/files`)
       const data = await res.json()
-      const quest = quests.find((q) => q.id === id)
-      const paths = quest?.image_paths || []
-      if (res.ok) setGalleryUrls(paths.map((p, i) => ({ path: p, url: data.urls[i] })))
+      if (res.ok) setQuestFiles(data.files || [])
     } catch {}
     setGalleryLoading(false)
   }
 
-  const toggleGallery = async (id: string) => {
+  const toggleFiles = async (id: string) => {
     if (galleryQuestId === id) { setGalleryQuestId(null); return }
     setGalleryQuestId(id)
-    setGalleryUrls([])
-    await fetchGallery(id)
+    setQuestFiles([])
+    await fetchFiles(id)
   }
 
-  const uploadMoreImages = async (id: string, fileList: FileList | null) => {
+  const uploadFiles = async (id: string, fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return
     setUploadingFor(id)
     try {
       const fd = new FormData()
-      Array.from(fileList).forEach((f) => fd.append('images', f))
-      const res = await fetch(`/api/admin/side-quests/${id}/images`, { method: 'POST', body: fd })
+      Array.from(fileList).forEach((f) => fd.append('files', f))
+      const res = await fetch(`/api/admin/side-quests/${id}/files`, { method: 'POST', body: fd })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await loadQuests()
-      await fetchGallery(id)
+      if (galleryQuestId === id) await fetchFiles(id)
     } catch (err: any) {
-      alert(err.message || 'Failed to upload images.')
+      alert(err.message || 'Failed to upload files.')
     }
     setUploadingFor(null)
   }
 
-  const deleteImage = async (questId: string, path: string) => {
-    if (!confirm('Remove this image from the quest?')) return
+  const deleteFile = async (questId: string, path: string, name: string) => {
+    if (!confirm(`Remove "${name}" from this quest?`)) return
     try {
-      const res = await fetch(`/api/admin/side-quests/${questId}/images`, {
+      const res = await fetch(`/api/admin/side-quests/${questId}/files`, {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ path }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await loadQuests()
-      setGalleryUrls((prev) => prev.filter((g) => g.path !== path))
+      await fetchFiles(questId)
     } catch (err: any) {
-      alert(err.message || 'Failed to remove image.')
+      alert(err.message || 'Failed to remove file.')
     }
   }
 
@@ -298,10 +308,14 @@ export default function SideQuestsPage() {
                   placeholder="What should teams do? Include any code snippet, prompt, or instructions here." />
               </div>
               <div>
-                <label className={labelCls}>Images <span className="text-ink-dim normal-case tracking-normal">(optional, hidden until picked)</span></label>
-                <input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))}
+                <label className={labelCls}>Attachments <span className="text-ink-dim normal-case tracking-normal">(optional, hidden until picked)</span></label>
+                <input type="file" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))}
                   className="w-full rounded-lg border border-dashed border-line bg-panel/40 px-3 py-2.5 text-sm text-ink-sub file:mr-3 file:rounded-md file:border-0 file:bg-brand/15 file:px-3 file:py-1.5 file:font-mono file:text-[0.62rem] file:font-bold file:uppercase file:text-brand" />
-                {files.length > 0 && <p className="mt-1.5 text-xs text-ink-dim">{files.length} image{files.length > 1 ? 's' : ''} selected</p>}
+                <p className="mt-1.5 text-xs text-ink-dim">
+                  {files.length > 0
+                    ? `${files.length} file${files.length > 1 ? 's' : ''} selected`
+                    : 'Any file type — images, .py, .json, .zip. Up to 25MB each.'}
+                </p>
               </div>
               <div>
                 <label className={labelCls}>Points</label>
@@ -329,8 +343,10 @@ export default function SideQuestsPage() {
               </div>
               <h3 className="font-display text-base font-bold text-ink">{q.title}</h3>
               <p className="flex-1 whitespace-pre-wrap break-words text-sm text-ink-sub">{q.description}</p>
-              {(q.image_paths?.length ?? 0) > 0 && (
-                <p className="text-xs text-ink-dim">🖼 {q.image_paths!.length} image{q.image_paths!.length > 1 ? 's' : ''}</p>
+              {(q.files?.length ?? 0) > 0 && (
+                <p className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-ink-dim">
+                  {q.files!.length} attachment{q.files!.length > 1 ? 's' : ''}
+                </p>
               )}
 
               <div className="mt-auto flex flex-wrap gap-2">
@@ -341,7 +357,7 @@ export default function SideQuestsPage() {
                   <button onClick={() => updateStatus(q.id, 'closed')} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-brand hover:bg-brand/5`}>Close Submissions</button>
                 )}
                 <button onClick={() => deleteQuest(q.id, q.status)} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-ink-sub hover:text-bad`}>Delete</button>
-                <button onClick={() => toggleGallery(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>{galleryQuestId === q.id ? 'Hide Images' : 'Manage Images'}</button>
+                <button onClick={() => toggleFiles(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>{galleryQuestId === q.id ? 'Hide Files' : 'Manage Files'}</button>
                 <button onClick={() => viewSubmissions(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>View Submissions</button>
               </div>
 
@@ -350,22 +366,33 @@ export default function SideQuestsPage() {
                   {galleryLoading ? (
                     <div className="flex justify-center py-4"><div className="h-6 w-6 animate-spin rounded-full border-2 border-line border-t-brand" /></div>
                   ) : (
-                    <div className="mb-2 grid grid-cols-3 gap-2">
-                      {galleryUrls.map((g) => (
-                        <div key={g.path} className="group relative aspect-square overflow-hidden rounded-lg border border-line">
-                          <img src={g.url} alt="" className="h-full w-full object-cover" />
-                          <button onClick={() => deleteImage(q.id, g.path)}
-                            className="absolute right-1 top-1 rounded-full bg-base/80 px-1.5 py-0.5 text-xs text-bad opacity-0 transition-opacity group-hover:opacity-100">✕</button>
+                    <div className="mb-3 flex flex-col gap-1.5">
+                      {questFiles.map((f) => (
+                        <div key={f.path} className="flex items-center gap-2.5 rounded-lg border border-line-soft bg-base/40 px-2.5 py-2">
+                          <span className="flex h-7 w-9 shrink-0 items-center justify-center rounded border border-line bg-panel/60 font-mono text-[0.52rem] font-bold uppercase text-brand">
+                            {fileExt(f.name)}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-ink">{f.name}</span>
+                            <span className="block font-mono text-[0.58rem] text-ink-dim">{formatBytes(f.size)}</span>
+                          </span>
+                          <a href={f.url} download={f.name}
+                            className="shrink-0 rounded-md border border-line px-2 py-1 font-mono text-[0.55rem] font-bold uppercase text-brand hover:bg-brand/5">Get</a>
+                          <button onClick={() => deleteFile(q.id, f.path, f.name)}
+                            className="shrink-0 rounded-md border border-bad/40 px-2 py-1 font-mono text-[0.55rem] font-bold uppercase text-bad hover:bg-bad/10">Del</button>
                         </div>
                       ))}
-                      {galleryUrls.length === 0 && <p className="col-span-3 text-xs text-ink-dim">No images yet.</p>}
+                      {questFiles.length === 0 && <p className="text-xs text-ink-dim">No files attached yet.</p>}
                     </div>
                   )}
                   <label className="block">
-                    <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.1em] text-ink-dim">Add more</span>
-                    <input type="file" accept="image/*" multiple disabled={uploadingFor === q.id}
-                      onChange={(e) => uploadMoreImages(q.id, e.target.files)}
+                    <span className="mb-1 block font-mono text-[0.58rem] uppercase tracking-[0.1em] text-ink-dim">
+                      Add files {uploadingFor === q.id && <span className="text-brand">· uploading…</span>}
+                    </span>
+                    <input type="file" multiple disabled={uploadingFor === q.id}
+                      onChange={(e) => { uploadFiles(q.id, e.target.files); e.target.value = '' }}
                       className="w-full text-xs text-ink-sub file:mr-2 file:rounded-md file:border-0 file:bg-brand/15 file:px-2.5 file:py-1 file:font-mono file:text-[0.6rem] file:font-bold file:uppercase file:text-brand" />
+                    <span className="mt-1 block text-[0.6rem] text-ink-dim">Any file type. Up to 25MB each.</span>
                   </label>
                 </div>
               )}

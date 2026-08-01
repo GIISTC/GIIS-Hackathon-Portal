@@ -20,10 +20,21 @@ export async function POST(request: Request, { params }: { params: { id: string 
       return NextResponse.json({ error: 'You must be on a team to submit.' }, { status: 400 })
     }
 
-    const { data: quest } = await supabase.from('side_quests').select('status').eq('id', params.id).single()
+    const { data: quest } = await supabase.from('side_quests').select('status, difficulty').eq('id', params.id).single()
     if (!quest) return NextResponse.json({ error: 'Quest not found' }, { status: 404 })
     if (quest.status !== 'open') {
       return NextResponse.json({ error: 'This side quest is not currently accepting submissions.' }, { status: 400 })
+    }
+
+    // RLS enforces this too — checking here just turns a bare policy
+    // denial into a message that explains what happened.
+    const { data: pick } = await supabase
+      .from('side_quest_picks').select('difficulty').eq('team_id', participant.team_id).maybeSingle()
+    if (!pick) {
+      return NextResponse.json({ error: 'Your team has not picked a difficulty tier yet.' }, { status: 400 })
+    }
+    if (pick.difficulty !== quest.difficulty) {
+      return NextResponse.json({ error: 'That quest is not in your team\'s chosen tier.' }, { status: 403 })
     }
 
     const body = await request.json()

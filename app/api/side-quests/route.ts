@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 
 // GET: participant-facing quest list. Every open/closed quest is listed so
 // the team can see the difficulty tiers on offer, but title/description/
-// files only come through for the ONE quest the team has picked —
-// side_quest_details RLS blocks the embed for everything else, so this
+// files only come through for quests in the tier the team picked —
+// side_quest_details RLS blocks the embed for every other tier, so this
 // isn't app-layer hiding, the database itself won't return the content.
 export async function GET() {
   const supabase = await createClient()
@@ -25,11 +25,11 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  let myPick: { quest_id: string; picked_at: string } | null = null
+  let myPick: { difficulty: string; picked_at: string } | null = null
   let submissions: any[] = []
   if (participant?.team_id) {
     const [{ data: pick }, { data: subs }] = await Promise.all([
-      supabase.from('side_quest_picks').select('quest_id, picked_at').eq('team_id', participant.team_id).maybeSingle(),
+      supabase.from('side_quest_picks').select('difficulty, picked_at').eq('team_id', participant.team_id).maybeSingle(),
       supabase.from('side_quest_submissions').select('*').eq('team_id', participant.team_id),
     ])
     myPick = pick || null

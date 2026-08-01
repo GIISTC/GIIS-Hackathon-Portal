@@ -22,10 +22,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
     const { data: participant } = await supabase.from('participants').select('team_id').eq('id', user.id).single()
     if (!participant?.team_id) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-    const { data: pick } = await supabase
-      .from('side_quest_picks').select('quest_id').eq('team_id', participant.team_id).maybeSingle()
-    if (!pick || pick.quest_id !== params.id) {
-      return NextResponse.json({ error: 'Your team has not picked this quest' }, { status: 403 })
+    const [{ data: pick }, { data: quest }] = await Promise.all([
+      supabase.from('side_quest_picks').select('difficulty').eq('team_id', participant.team_id).maybeSingle(),
+      supabase.from('side_quests').select('difficulty').eq('id', params.id).maybeSingle(),
+    ])
+    if (!pick || !quest || pick.difficulty !== quest.difficulty) {
+      return NextResponse.json({ error: 'Your team has not picked this tier' }, { status: 403 })
     }
   }
 

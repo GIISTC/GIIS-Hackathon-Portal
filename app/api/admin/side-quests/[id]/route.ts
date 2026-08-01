@@ -15,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   try {
-    const { data: current } = await supabase.from('side_quests').select('status').eq('id', params.id).single()
+    const { data: current } = await supabase.from('side_quests').select('status, opened_at').eq('id', params.id).single()
     if (!current) return NextResponse.json({ error: 'Quest not found' }, { status: 404 })
 
     const body = await request.json()
@@ -37,7 +37,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         return NextResponse.json({ error: 'Invalid status' }, { status: 400 })
       }
       questUpdate.status = body.status
-      if (body.status === 'open') questUpdate.opened_at = new Date().toISOString()
+      if (body.status === 'open') {
+        // Reopening keeps the original release time and drops the stale
+        // closed_at, so an open quest never looks closed in the record.
+        if (!current.opened_at) questUpdate.opened_at = new Date().toISOString()
+        questUpdate.closed_at = null
+      }
       if (body.status === 'closed') questUpdate.closed_at = new Date().toISOString()
     }
 

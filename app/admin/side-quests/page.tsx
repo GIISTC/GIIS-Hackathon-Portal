@@ -356,6 +356,9 @@ export default function SideQuestsPage() {
                 {q.status === 'open' && (
                   <button onClick={() => updateStatus(q.id, 'closed')} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-brand hover:bg-brand/5`}>Close Submissions</button>
                 )}
+                {q.status === 'closed' && (
+                  <button onClick={() => updateStatus(q.id, 'open')} disabled={actionLoading === q.id} className={`${smBtn} bg-gradient-to-br from-brand to-brand-blue text-base`}>Reopen Submissions</button>
+                )}
                 <button onClick={() => deleteQuest(q.id, q.status)} disabled={actionLoading === q.id} className={`${smBtn} border border-line text-ink-sub hover:text-bad`}>Delete</button>
                 <button onClick={() => toggleFiles(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>{galleryQuestId === q.id ? 'Hide Files' : 'Manage Files'}</button>
                 <button onClick={() => viewSubmissions(q.id)} className={`${smBtn} text-ink-dim hover:text-ink`}>View Submissions</button>

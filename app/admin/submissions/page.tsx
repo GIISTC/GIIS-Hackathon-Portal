@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AdminNav from '@/components/AdminNav'
 import { externalUrl } from '@/lib/url'
+import { categoryFromGrades } from '@/lib/leaderboard'
+import type { LeaderboardCategory, LeaderboardPool } from '@/lib/types'
 
 const shell = 'min-h-screen bg-base font-body text-ink'
 const main = 'px-4 pb-14 pt-16 lg:ml-60 lg:px-8 lg:pt-8 [&>*]:mx-auto [&>*]:max-w-6xl'
@@ -13,6 +15,7 @@ const linkBtn = 'rounded-md border border-line px-2.5 py-1 font-mono text-[0.62r
 const smBtn = 'rounded-lg px-2.5 py-1.5 font-mono text-[0.6rem] font-bold uppercase tracking-[0.1em] transition-colors'
 const inputCls = 'w-full rounded-lg border border-line bg-panel/60 px-3 py-2.5 font-body text-ink outline-none transition-colors placeholder:text-ink-dim focus:border-brand'
 const labelCls = 'mb-1.5 block font-mono text-[0.6rem] uppercase tracking-[0.12em] text-brand'
+const filterSelect = 'flex-1 rounded-lg border border-line bg-panel/60 px-2.5 py-2 font-body text-sm text-ink outline-none focus:border-brand disabled:opacity-50 sm:flex-none'
 
 type EditDraft = { project_name: string; description: string; github_url: string; drive_url: string; demo_url: string }
 
@@ -25,13 +28,29 @@ export default function AdminSubmissionsPage() {
   const [draft, setDraft] = useState<EditDraft>({ project_name: '', description: '', github_url: '', drive_url: '', demo_url: '' })
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<'all' | LeaderboardCategory>('all')
+  const [poolFilter, setPoolFilter] = useState<'all' | LeaderboardPool>('all')
 
   const load = async () => {
     const supabase = createClient()
     const { data: subData } = await supabase
-      .from('submissions').select('*, team:teams(team_name)').order('submitted_at', { ascending: false })
+      .from('submissions')
+      .select('*, team:teams(team_name, track, participants(grade))')
+      .order('submitted_at', { ascending: false })
     setSubmissions(subData || [])
   }
+
+  // Pool only applies to Seniors (they picked one of the 2 tracks). Juniors
+  // have no track, so they never match a specific pool filter — only "All".
+  const subCategory = (s: any) => categoryFromGrades((s.team?.participants || []).map((p: any) => p.grade))
+  const subPool = (s: any): LeaderboardPool | null => (s.team?.track ? (s.team.track === 'Game Dev' ? 'game_dev' : 'app_web') : null)
+
+  const filteredSubmissions = submissions.filter((s) => {
+    if (categoryFilter !== 'all' && subCategory(s) !== categoryFilter) return false
+    if (poolFilter !== 'all' && subCategory(s) === 'Senior' && subPool(s) !== poolFilter) return false
+    if (poolFilter !== 'all' && subCategory(s) === 'Junior') return false
+    return true
+  })
 
   useEffect(() => {
     const init = async () => {
@@ -103,13 +122,27 @@ export default function AdminSubmissionsPage() {
     <div className={shell}>
       <AdminNav active="submissions" adminName={adminName} />
       <main className={main}>
-        <div className="mb-6">
-          <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Project Submissions</h1>
-          <p className="text-sm text-ink-sub">Browse, edit, or delete any team's submission</p>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl font-bold text-ink sm:text-3xl">Project Submissions</h1>
+            <p className="text-sm text-ink-sub">Browse, edit, or delete any team's submission</p>
+          </div>
+          <div className="flex gap-2">
+            <select className={filterSelect} value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value as any); setPoolFilter('all') }}>
+              <option value="all">All Categories</option>
+              <option value="Junior">Junior</option>
+              <option value="Senior">Senior</option>
+            </select>
+            <select className={filterSelect} value={poolFilter} disabled={categoryFilter === 'Junior'} onChange={(e) => setPoolFilter(e.target.value as any)}>
+              <option value="all">All Tracks</option>
+              <option value="app_web">App/Web Dev</option>
+              <option value="game_dev">Game Dev</option>
+            </select>
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
-          {submissions.map((s) => (
+          {filteredSubmissions.map((s) => (
             <div key={s.id} className={card}>
               {editingId === s.id ? (
                 <div className="flex flex-col gap-3">
@@ -145,7 +178,17 @@ export default function AdminSubmissionsPage() {
               ) : (
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-ink-dim">{s.team?.team_name}</div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-ink-dim">{s.team?.team_name}</span>
+                      {subCategory(s) && (
+                        <span className={`rounded-full px-2 py-0.5 font-mono text-[0.55rem] font-bold uppercase ${subCategory(s) === 'Senior' ? 'bg-brand/10 text-brand' : 'bg-warn/10 text-warn'}`}>
+                          {subCategory(s)}
+                        </span>
+                      )}
+                      {s.team?.track && (
+                        <span className="rounded-full bg-line/40 px-2 py-0.5 font-mono text-[0.55rem] font-bold uppercase text-ink-sub">{s.team.track}</span>
+                      )}
+                    </div>
                     <h3 className="mt-0.5 font-display text-base font-bold text-ink">{s.project_name}</h3>
                     <p className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-sub">{s.description}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
@@ -163,7 +206,11 @@ export default function AdminSubmissionsPage() {
               )}
             </div>
           ))}
-          {submissions.length === 0 && <p className={`${card} text-center text-sm text-ink-dim`}>No submissions yet</p>}
+          {filteredSubmissions.length === 0 && (
+            <p className={`${card} text-center text-sm text-ink-dim`}>
+              {submissions.length === 0 ? 'No submissions yet' : 'No submissions match this filter.'}
+            </p>
+          )}
         </div>
       </main>
     </div>

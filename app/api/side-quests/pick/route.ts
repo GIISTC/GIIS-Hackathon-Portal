@@ -21,9 +21,18 @@ export async function POST(request: Request) {
     }
 
     const { data: participant } = await supabase
-      .from('participants').select('team_id').eq('id', user.id).single()
+      .from('participants').select('team_id, approval_status').eq('id', user.id).single()
     if (!participant?.team_id) {
       return NextResponse.json({ error: 'You must be on a team to pick a quest.' }, { status: 400 })
+    }
+    // RLS enforces this too, but without checking here the policy denial
+    // surfaces as a raw "violates row-level security policy" message that
+    // says nothing about what to do.
+    if (participant.approval_status !== 'approved') {
+      return NextResponse.json(
+        { error: 'Your registration is still awaiting OT approval, so your team cannot pick a tier yet.' },
+        { status: 403 },
+      )
     }
 
     const { data: existingPick } = await supabase
@@ -52,6 +61,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           { error: 'Your team has already picked a tier — that choice is locked in.' },
           { status: 400 },
+        )
+      }
+      if (insertError.code === '42501' || /row-level security/i.test(insertError.message || '')) {
+        console.error('Pick blocked by RLS:', insertError, 'team:', participant.team_id, 'tier:', difficulty)
+        return NextResponse.json(
+          { error: 'Your team is not allowed to pick right now. This is usually because the registration is not approved yet, or that tier has no released quests. Ask an OT member to check.' },
+          { status: 403 },
         )
       }
       throw insertError

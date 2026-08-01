@@ -89,6 +89,7 @@ function CategoryTable({ label, rows }: { label: string; rows: LeaderboardEntry[
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardData | null>(null)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
+  const [disabled, setDisabled] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const load = async () => {
@@ -98,6 +99,10 @@ export default function LeaderboardPage() {
       if (res.ok) {
         setData({ junior: body.junior, senior: body.senior })
         setUpdatedAt(body.updatedAt)
+        setDisabled(false)
+      } else if (body?.disabled) {
+        setDisabled(true)
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
       }
     } catch {}
   }
@@ -135,7 +140,13 @@ export default function LeaderboardPage() {
           )}
         </header>
 
-        {!data ? (
+        {disabled ? (
+          <div className="mx-auto flex max-w-md flex-col items-center gap-3 rounded-card border border-line bg-panel/70 p-10 text-center shadow-panel">
+            <div className="font-mono text-[0.7rem] uppercase tracking-[0.24em] text-warn">Hidden</div>
+            <h2 className="font-display text-xl font-bold text-ink">Leaderboard Not Available</h2>
+            <p className="text-sm text-ink-sub">The leaderboard isn&apos;t being shown right now. Check back later.</p>
+          </div>
+        ) : !data ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-ink-dim">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand" />
             Loading leaderboard…

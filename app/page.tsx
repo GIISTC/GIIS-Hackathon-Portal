@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import nextDynamic from 'next/dynamic'
 import Navbar from '@/components/Navbar'
+import { createServiceClient } from '@/lib/supabase/server'
 
 const CountdownTimer = nextDynamic(() => import('@/components/CountdownTimer'), { ssr: false })
 const HeroCanvas = nextDynamic(() => import('@/components/HeroCanvas'), { ssr: false })
@@ -77,11 +78,28 @@ const eyebrow = 'mb-3 font-mono text-[0.7rem] uppercase tracking-[0.28em] text-b
 const h2 = 'font-display text-3xl font-bold text-ink sm:text-4xl [text-wrap:balance]'
 const card = 'rounded-card border border-line bg-panel/70 p-6'
 
-export default function HomePage({ searchParams }: { searchParams?: { code?: string } }) {
+export default async function HomePage({ searchParams }: { searchParams?: { code?: string } }) {
   // Supabase sends password-reset links to the site root (/?code=xxx).
   // Forward to the real callback handler.
   if (searchParams?.code) {
     redirect(`/auth/callback?code=${searchParams.code}&next=/auth/reset-password`)
+  }
+
+  // The home page has no other dependency on Supabase being reachable — a
+  // slow or unreachable database must never hang or take down the landing
+  // page, so this is capped and defaults to hidden (the safe default for
+  // this toggle anyway) rather than left to hang indefinitely.
+  let leaderboardEnabled = false
+  try {
+    const supabase = createServiceClient()
+    const query = supabase.from('system_settings').select('value').eq('key', 'leaderboard_enabled').maybeSingle()
+    const { data: lbSetting }: any = await Promise.race([
+      query,
+      new Promise((resolve) => setTimeout(() => resolve({ data: null }), 2500)),
+    ])
+    leaderboardEnabled = lbSetting?.value === true
+  } catch {
+    leaderboardEnabled = false
   }
 
   return (
@@ -118,9 +136,11 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
             <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-10 py-5 font-mono text-base font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
               Register Your Team →
             </Link>
-            <Link href="/leaderboard" className="rounded-lg border border-line px-10 py-5 font-mono text-base font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
-              Live Leaderboard
-            </Link>
+            {leaderboardEnabled && (
+              <Link href="/leaderboard" className="rounded-lg border border-line px-10 py-5 font-mono text-base font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
+                Live Leaderboard
+              </Link>
+            )}
           </div>
           <div className="mt-16 w-full">
             <p className="mb-5 font-mono text-sm uppercase tracking-[0.24em] text-ink-dim">Countdown to Hackathon</p>
@@ -233,8 +253,10 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
           <span>
             Seniors compete on 2 leaderboards — <strong className="text-ink">App/Web Dev</strong> and{' '}
             <strong className="text-ink">Game Dev</strong> — by track. Juniors rank together on one combined leaderboard,
-            no track needed. Category is decided by the <strong className="text-ink">team&apos;s oldest member</strong>. See the full{' '}
-            <Link href="/leaderboard" className="text-brand underline">Leaderboard →</Link>
+            no track needed. Category is decided by the <strong className="text-ink">team&apos;s oldest member</strong>.
+            {leaderboardEnabled && (
+              <> See the full <Link href="/leaderboard" className="text-brand underline">Leaderboard →</Link></>
+            )}
           </span>
         </div>
       </section>
@@ -342,9 +364,11 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
               <Link href="/register" className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-base transition-opacity hover:opacity-90">
                 Register Your Team →
               </Link>
-              <Link href="/leaderboard" className="rounded-lg border border-line px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
-                View Leaderboard
-              </Link>
+              {leaderboardEnabled && (
+                <Link href="/leaderboard" className="rounded-lg border border-line px-7 py-3.5 font-mono text-xs font-bold uppercase tracking-[0.14em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
+                  View Leaderboard
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -362,7 +386,7 @@ export default function HomePage({ searchParams }: { searchParams?: { code?: str
             {[
               { href: 'https://giistechclub.com', label: 'Tech Club' },
               { href: 'mailto:techclub@giis.edu.sg', label: 'Contact' },
-              { href: '/leaderboard', label: 'Leaderboard' },
+              ...(leaderboardEnabled ? [{ href: '/leaderboard', label: 'Leaderboard' }] : []),
               { href: '/admin', label: 'Admin' },
             ].map((l) => (
               <Link key={l.label} href={l.href} className="rounded-full border border-line px-4 py-2 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-ink-sub transition-colors hover:border-brand/50 hover:text-brand">

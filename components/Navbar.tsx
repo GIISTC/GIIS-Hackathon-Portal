@@ -4,19 +4,31 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { href: '/#about', label: 'About' },
   { href: '/#schedule', label: 'Schedule' },
   { href: '/#tracks', label: 'Tracks' },
   { href: '/#faq', label: 'FAQ' },
-  { href: '/leaderboard', label: 'Leaderboard' },
 ]
+const LEADERBOARD_LINK = { href: '/leaderboard', label: 'Leaderboard' }
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [leaderboardEnabled, setLeaderboardEnabled] = useState(false)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000)
+    fetch('/api/admin/settings', { signal: controller.signal }).then((r) => r.json()).then((data) => {
+      setLeaderboardEnabled(data?.leaderboard_enabled === true)
+    }).catch(() => {}).finally(() => clearTimeout(timeout))
+    return () => { clearTimeout(timeout); controller.abort() }
+  }, [])
+
+  const NAV_LINKS = leaderboardEnabled ? [...BASE_NAV_LINKS, LEADERBOARD_LINK] : BASE_NAV_LINKS
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)

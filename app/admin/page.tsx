@@ -23,7 +23,7 @@ export default function AdminDashboard() {
   const [recentTeams, setRecentTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [adminName, setAdminName] = useState('')
-  const [settings, setSettings] = useState<any>({ submissions_enabled: true, team_switching_enabled: true })
+  const [settings, setSettings] = useState<any>({ submissions_enabled: true, team_switching_enabled: true, leaderboard_enabled: false })
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
 
   useEffect(() => {
@@ -146,10 +146,14 @@ export default function AdminDashboard() {
             <h2 className="font-display text-sm font-bold uppercase tracking-wide text-brand">Command Center</h2>
             <p className="text-xs text-ink-dim">Master event controls</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <Toggle label="Submissions" k="submissions_enabled" />
             <Toggle label="Team Switching" k="team_switching_enabled" />
+            <Toggle label="Leaderboard" k="leaderboard_enabled" />
           </div>
+          <p className="mt-2 text-[0.68rem] text-ink-dim">
+            Leaderboard controls the public/participant view only — it never affects your own Judging → Leaderboard tab.
+          </p>
         </div>
 
         {/* Stats */}

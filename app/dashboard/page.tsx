@@ -30,6 +30,7 @@ export default function DashboardPage() {
   const [needsProfile, setNeedsProfile] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [teamSwitchingEnabled, setTeamSwitchingEnabled] = useState(true)
+  const [leaderboardEnabled, setLeaderboardEnabled] = useState(false)
   const [myRank, setMyRank] = useState<LeaderboardEntry | null>(null)
   const [checkedInDays, setCheckedInDays] = useState<Set<number>>(new Set())
 
@@ -44,6 +45,10 @@ export default function DashboardPage() {
         .from('system_settings').select('value').eq('key', 'team_switching_enabled').maybeSingle()
       setTeamSwitchingEnabled(settingRow ? settingRow.value === true : false)
 
+      const { data: lbSetting } = await supabase
+        .from('system_settings').select('value').eq('key', 'leaderboard_enabled').maybeSingle()
+      setLeaderboardEnabled(lbSetting ? lbSetting.value === true : false)
+
       const { data: part, error: partError } = await supabase
         .from('participants').select('*, team:teams(*)').eq('id', user.id).single()
 
@@ -54,15 +59,17 @@ export default function DashboardPage() {
 
       if (part.approval_status !== 'approved') { setLoading(false); return }
 
-      fetch('/api/leaderboard').then((r) => r.json()).then((data) => {
-        if (!data?.junior || !data?.senior) return
-        const track = (part.team as any)?.track
-        const lists = track ? [data.senior[track === 'Game Dev' ? 'game_dev' : 'app_web']] : [data.junior]
-        for (const list of lists) {
-          const entry = (list || []).find((e: LeaderboardEntry) => e.team_id === part.team_id)
-          if (entry) { setMyRank(entry); return }
-        }
-      }).catch(() => {})
+      if (lbSetting?.value === true) {
+        fetch('/api/leaderboard').then((r) => r.json()).then((data) => {
+          if (!data?.junior || !data?.senior) return
+          const track = (part.team as any)?.track
+          const lists = track ? [data.senior[track === 'Game Dev' ? 'game_dev' : 'app_web']] : [data.junior]
+          for (const list of lists) {
+            const entry = (list || []).find((e: LeaderboardEntry) => e.team_id === part.team_id)
+            if (entry) { setMyRank(entry); return }
+          }
+        }).catch(() => {})
+      }
 
       const { data: mates } = await supabase.from('participants').select('*').eq('team_id', part.team_id).neq('id', user.id).eq('approval_status', 'approved')
       setTeammates(mates || [])
@@ -270,7 +277,7 @@ export default function DashboardPage() {
               { href: '/dashboard', label: 'Dashboard', active: true },
               { href: '/dashboard/submit', label: 'Submit Project' },
               { href: '/dashboard/side-quests', label: 'Side Quests' },
-              { href: '/leaderboard', label: 'Leaderboard' },
+              ...(leaderboardEnabled ? [{ href: '/leaderboard', label: 'Leaderboard' }] : []),
             ].map((l) => (
               <Link key={l.href} href={l.href}
                 className={`rounded-lg px-4 py-2.5 font-mono text-[0.72rem] uppercase tracking-[0.12em] transition-colors ${

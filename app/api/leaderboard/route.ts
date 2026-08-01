@@ -26,9 +26,20 @@ const strip = (e: any): LeaderboardEntry => ({
 // total_score, and returns ONLY safe fields — no per-criterion breakdown,
 // no bonus fields or labels, so a participant can never infer bonus exists
 // even via devtools/network inspection of this response.
+//
+// Gated by leaderboard_enabled — OT's own view (app/api/admin/leaderboard)
+// is a completely separate route and is never affected by this toggle, so
+// judging is unaffected when the public/participant leaderboard is off.
 export async function GET() {
   try {
     const supabase = createServiceClient()
+
+    const { data: setting } = await supabase
+      .from('system_settings').select('value').eq('key', 'leaderboard_enabled').maybeSingle()
+    if (setting?.value !== true) {
+      return NextResponse.json({ disabled: true, error: 'The leaderboard is currently hidden.' }, { status: 403 })
+    }
+
     const { junior, senior, updatedAt } = await computeLeaderboard(supabase)
 
     const publicSenior: Record<LeaderboardPool, LeaderboardEntry[]> = {

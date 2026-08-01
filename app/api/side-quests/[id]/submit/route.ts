@@ -29,12 +29,15 @@ export async function POST(request: Request, { params }: { params: { id: string 
     // RLS enforces this too — checking here just turns a bare policy
     // denial into a message that explains what happened.
     const { data: pick } = await supabase
-      .from('side_quest_picks').select('difficulty').eq('team_id', participant.team_id).maybeSingle()
+      .from('side_quest_picks').select('difficulty, quest_id').eq('team_id', participant.team_id).maybeSingle()
     if (!pick) {
       return NextResponse.json({ error: 'Your team has not picked a difficulty tier yet.' }, { status: 400 })
     }
-    if (pick.difficulty !== quest.difficulty) {
-      return NextResponse.json({ error: 'That quest is not in your team\'s chosen tier.' }, { status: 403 })
+    if (!pick.quest_id) {
+      return NextResponse.json({ error: 'Choose which quest your team is attempting first.' }, { status: 400 })
+    }
+    if (pick.quest_id !== params.id) {
+      return NextResponse.json({ error: 'That is not the quest your team chose.' }, { status: 403 })
     }
 
     const body = await request.json()

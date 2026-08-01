@@ -10,7 +10,7 @@ import { DIFFICULTY_LABELS } from '@/lib/types'
 import { externalUrl } from '@/lib/url'
 
 type QuestWithSubmission = SideQuest & { mySubmission: SideQuestSubmission | null; hasFiles: boolean }
-type Pick = { difficulty: QuestDifficulty; picked_at: string }
+type Pick = { difficulty: QuestDifficulty; quest_id: string | null; picked_at: string }
 type QuestFileLink = { path: string; name: string; size: number; url: string }
 type Draft = { response_text: string; response_link: string }
 
@@ -44,6 +44,7 @@ export default function SideQuestsPage() {
   const [quests, setQuests] = useState<QuestWithSubmission[]>([])
   const [myPick, setMyPick] = useState<Pick | null>(null)
   const [picking, setPicking] = useState<QuestDifficulty | null>(null)
+  const [choosing, setChoosing] = useState<string | null>(null)
   const [pickError, setPickError] = useState<string | null>(null)
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
@@ -121,6 +122,21 @@ export default function SideQuestsPage() {
     setPicking(null)
   }
 
+  const chooseQuest = async (questId: string, title: string) => {
+    if (!confirm(`Attempt "${title}"? Your team can only work on one quest from this tier, and this choice is final.`)) return
+    setChoosing(questId)
+    setPickError(null)
+    try {
+      const res = await fetch(`/api/side-quests/${questId}/choose`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await load()
+    } catch (err: any) {
+      setPickError(err.message || 'Failed to choose that quest.')
+    }
+    setChoosing(null)
+  }
+
   const submit = async (questId: string) => {
     setSavingId(questId)
     setSubmitError((prev) => ({ ...prev, [questId]: '' }))
@@ -185,8 +201,10 @@ export default function SideQuestsPage() {
   const lockedTiers = myPick
     ? TIERS.filter((d) => d !== myPick.difficulty && quests.some((q) => q.difficulty === d))
     : []
-  const earned = myQuests.filter((q) => q.mySubmission?.verdict === 'correct').reduce((s, q) => s + (q.points || 0), 0)
-  const totalOnOffer = myQuests.reduce((s, q) => s + (q.points || 0), 0)
+  const chosenQuest = myPick?.quest_id ? myQuests.find((q) => q.id === myPick.quest_id) || null : null
+  const scoring = chosenQuest ? [chosenQuest] : myQuests
+  const earned = scoring.filter((q) => q.mySubmission?.verdict === 'correct').reduce((s, q) => s + (q.points || 0), 0)
+  const totalOnOffer = scoring.reduce((s, q) => s + (q.points || 0), 0)
 
   return (
     <div className="min-h-screen bg-base font-body text-ink">
@@ -197,9 +215,11 @@ export default function SideQuestsPage() {
           <p className="mt-4 font-mono text-[0.7rem] uppercase tracking-[0.28em] text-brand">// Bonus Challenge</p>
           <h1 className="mt-2 font-display text-3xl font-bold text-ink sm:text-4xl">Side Quests</h1>
           <p className="mt-2 text-ink-sub">
-            {myPick
-              ? `Your team locked in the ${DIFFICULTY_LABELS[myPick.difficulty]} tier. Every quest in it is below — attempt as many as you like.`
-              : 'Pick a difficulty tier blind. You won’t see the quests until you commit, and once you commit every other tier is locked out for your team. Choose wisely.'}
+            {!myPick
+              ? 'Pick a difficulty tier blind. You won’t see the quests until you commit, and once you commit every other tier is locked out for your team. Choose wisely.'
+              : myPick.quest_id
+                ? `Your team is attempting one ${DIFFICULTY_LABELS[myPick.difficulty]} quest. Good luck.`
+                : `Your team locked in the ${DIFFICULTY_LABELS[myPick.difficulty]} tier. Read all of them, then choose the one quest your team will attempt.`}
           </p>
         </div>
 
@@ -248,7 +268,9 @@ export default function SideQuestsPage() {
                   {DIFFICULTY_LABELS[myPick.difficulty]} Tier
                 </span>
                 <p className="mt-2 text-sm text-ink-sub">
-                  {myQuests.length} quest{myQuests.length === 1 ? '' : 's'} unlocked
+                  {myPick.quest_id
+                    ? 'Quest chosen'
+                    : `${myQuests.length} quest${myQuests.length === 1 ? '' : 's'} to choose from`}
                 </p>
               </div>
               <div className="text-right">
@@ -258,6 +280,8 @@ export default function SideQuestsPage() {
                 <p className="font-mono text-[0.58rem] uppercase tracking-[0.12em] text-ink-dim">Earned so far</p>
               </div>
             </div>
+
+            {pickError && <div className="rounded-lg border border-bad/30 bg-bad/10 px-4 py-2.5 text-sm text-[#fca5a5]">{pickError}</div>}
 
             {myQuests.length === 0 && (
               <div className={`${card} py-10 text-center text-sm text-ink-dim`}>
@@ -269,13 +293,16 @@ export default function SideQuestsPage() {
               const files = filesByQuest[q.id] || []
               const draft = drafts[q.id] || { response_text: '', response_link: '' }
               return (
-                <div key={q.id} className={card}>
+                <div key={q.id} className={`${card} ${myPick.quest_id && myPick.quest_id !== q.id ? 'opacity-60' : ''}`}>
                   <div className="mb-2 flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <span className="font-mono text-[0.58rem] uppercase tracking-[0.14em] text-ink-dim">Quest {i + 1} of {myQuests.length}</span>
                       <h3 className="font-display text-lg font-bold text-ink">{q.title}</h3>
                     </div>
                     <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                      {myPick.quest_id === q.id && (
+                        <span className="rounded-full bg-good/15 px-2.5 py-1 font-mono text-[0.58rem] font-bold uppercase text-good">Your Quest</span>
+                      )}
                       <span className="rounded-full bg-brand/10 px-2.5 py-1 font-mono text-[0.6rem] font-bold text-brand">+{q.points} pts</span>
                       <span className={`rounded-full px-2.5 py-1 font-mono text-[0.58rem] font-bold uppercase ${q.status === 'open' ? 'bg-good/15 text-good' : 'bg-bad/15 text-bad'}`}>
                         {q.status === 'open' ? 'Open' : 'Closed'}
@@ -311,7 +338,22 @@ export default function SideQuestsPage() {
                     </div>
                   )}
 
-                  {q.status === 'open' ? (
+                  {!myPick.quest_id ? (
+                    <div className="flex flex-wrap items-center gap-3 border-t border-line pt-3">
+                      <button onClick={() => chooseQuest(q.id, q.title || 'this quest')}
+                        disabled={choosing !== null || q.status !== 'open'}
+                        className="rounded-lg bg-gradient-to-br from-brand to-brand-blue px-5 py-2.5 font-mono text-[0.7rem] font-bold uppercase tracking-[0.12em] text-base transition-opacity hover:opacity-90 disabled:opacity-50">
+                        {choosing === q.id ? 'Locking in…' : 'Attempt This Quest'}
+                      </button>
+                      <span className="font-mono text-[0.58rem] uppercase tracking-[0.1em] text-ink-dim">
+                        {q.status === 'open' ? 'Final choice' : 'Closed — cannot be chosen'}
+                      </span>
+                    </div>
+                  ) : myPick.quest_id !== q.id ? (
+                    <div className="border-t border-line pt-3">
+                      <p className="text-sm text-ink-dim">Your team chose a different quest from this tier.</p>
+                    </div>
+                  ) : q.status === 'open' ? (
                     <div className="border-t border-line pt-3">
                       <div className="mb-3">
                         <label className={labelCls}>Your Response</label>

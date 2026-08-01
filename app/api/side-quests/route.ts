@@ -25,11 +25,11 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  let myPick: { difficulty: string; picked_at: string } | null = null
+  let myPick: { difficulty: string; quest_id: string | null; picked_at: string } | null = null
   let submissions: any[] = []
   if (participant?.team_id) {
     const [{ data: pick }, { data: subs }] = await Promise.all([
-      supabase.from('side_quest_picks').select('difficulty, picked_at').eq('team_id', participant.team_id).maybeSingle(),
+      supabase.from('side_quest_picks').select('difficulty, quest_id, picked_at').eq('team_id', participant.team_id).maybeSingle(),
       supabase.from('side_quest_submissions').select('*').eq('team_id', participant.team_id),
     ])
     myPick = pick || null

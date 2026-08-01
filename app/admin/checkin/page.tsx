@@ -34,6 +34,8 @@ export default function CheckinPage() {
   const [adminName, setAdminName] = useState('')
   const [judgeId, setJudgeId] = useState('')
   const [day, setDay] = useState<EventDay>(defaultDay())
+  const [cameraList, setCameraList] = useState<{ id: string; label: string }[]>([])
+  const cameraIdRef = useRef<string | null>(null)
 
   // The scan callback is handed to html5-qrcode once, at scanner-start
   // time, so it closes over whatever `day`/`judgeId` were at that moment.
@@ -84,24 +86,106 @@ export default function CheckinPage() {
 
   const processingRef = useRef(false)
 
+  // A fixed qrbox larger than the video feed makes html5-qrcode throw, which
+  // on a narrow phone looked identical to a permission failure. Sizing it
+  // from the actual feed avoids that entirely.
+  const qrboxFor = (w: number, h: number) => {
+    const edge = Math.max(140, Math.floor(Math.min(w, h) * 0.7))
+    return { width: edge, height: edge }
+  }
+
+  const cameraErrorMessage = (err: any) => {
+    const name = err?.name || ''
+    const detail = err?.message ? ` (${err.message})` : ''
+    if (name === 'NotAllowedError' || /denied|permission/i.test(err?.message || '')) {
+      return 'Camera permission was blocked for this site. Tap the padlock in the address bar → Permissions → allow Camera, then reload the page.'
+    }
+    if (name === 'NotReadableError' || name === 'TrackStartError') {
+      return 'The camera is already in use by another app or tab. Close any other camera app, then try again.'
+    }
+    if (name === 'NotFoundError' || name === 'OverconstrainedError' || name === 'DevicesNotFoundError') {
+      return `No usable camera was found on this device.${detail}`
+    }
+    if (name === 'SecurityError') {
+      return 'The browser blocked the camera because this page is not on a secure connection. Open the site over https.'
+    }
+    return `Could not start the camera${detail}. Use Admin → Attendance to check people in manually while this is sorted.`
+  }
+
   const startScanner = async () => {
     if (!scannerRef.current) return
     setIsScanning(true)
     setScanState('scanning')
+    setErrorMsg('')
     try {
+      // getUserMedia only exists in a secure context. Served over plain http
+      // (or a bare LAN IP) the API is simply missing, which previously showed
+      // up as a generic "access denied".
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        throw Object.assign(new Error('Page is not a secure context'), { name: 'SecurityError' })
+      }
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw Object.assign(new Error('This browser does not expose camera access'), { name: 'NotFoundError' })
+      }
+
       const { Html5Qrcode } = await import('html5-qrcode')
+
+      // Ask for permission up front. This both triggers the prompt and makes
+      // camera labels readable, which is what lets us pick the rear camera.
+      const probe = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      probe.getTracks().forEach((t) => t.stop())
+
+      let cameras: { id: string; label: string }[] = []
+      try { cameras = await Html5Qrcode.getCameras() } catch { cameras = [] }
+      setCameraList(cameras)
+
+      const rear = cameras.find((c) => /back|rear|environment/i.test(c.label))
+      const preferred = cameraIdRef.current
+        || rear?.id
+        || (cameras.length ? cameras[cameras.length - 1].id : null)
+
       html5QrRef.current = new Html5Qrcode('qr-scanner-region')
-      await html5QrRef.current.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        onScanSuccess, undefined,
-      )
+      const config = { fps: 10, qrbox: qrboxFor, aspectRatio: 1.0 }
+
+      // Devices vary wildly in which constraint they accept, so try the
+      // specific camera first, then a soft rear-camera preference, then
+      // literally any camera, rather than failing on the first refusal.
+      const attempts: any[] = []
+      if (preferred) attempts.push(preferred)
+      attempts.push({ facingMode: { ideal: 'environment' } })
+      attempts.push({ facingMode: 'user' })
+
+      let started = false
+      let lastErr: any = null
+      for (const source of attempts) {
+        try {
+          await html5QrRef.current.start(source, config, onScanSuccess, undefined)
+          if (typeof source === 'string') cameraIdRef.current = source
+          started = true
+          break
+        } catch (err) {
+          lastErr = err
+          console.warn('Camera attempt failed:', source, err)
+        }
+      }
+      if (!started) throw lastErr || new Error('No camera could be started')
     } catch (err: any) {
-      console.error('Camera start failed:', err)
-      setErrorMsg(`Camera access denied or not available.${err?.message ? ` (${err.message})` : ''}`)
+      console.error('Camera start failed:', err?.name, err)
+      setErrorMsg(cameraErrorMessage(err))
       setScanState('error')
       setIsScanning(false)
     }
+  }
+
+  // Cycle to the next camera — some phones report several rear lenses and
+  // only one of them actually focuses close enough to read a QR code.
+  const switchCamera = async () => {
+    if (cameraList.length < 2) return
+    const idx = cameraList.findIndex((c) => c.id === cameraIdRef.current)
+    cameraIdRef.current = cameraList[(idx + 1) % cameraList.length].id
+    await stopScanner()
+    await new Promise((r) => setTimeout(r, 250))
+    startScanner()
   }
 
   const stopScanner = async () => {
@@ -261,15 +345,29 @@ export default function CheckinPage() {
                 </button>
               )}
               {isScanning && (
-                <button onClick={stopScanner} className="w-full rounded-lg border border-line py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
-                  Stop Scanner
-                </button>
+                <div className="flex gap-2">
+                  <button onClick={stopScanner} className="flex-1 rounded-lg border border-line py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-brand transition-colors hover:border-brand/60 hover:bg-brand/5">
+                    Stop Scanner
+                  </button>
+                  {cameraList.length > 1 && (
+                    <button onClick={switchCamera} className="rounded-lg border border-line px-4 py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-ink-sub transition-colors hover:border-brand/60 hover:text-brand">
+                      Flip
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
             {scanState === 'success' && result && resultBox('border-good/30', 'bg-good/[0.08]', 'bg-good', result.full_name, `${(result as any).team?.team_name} · ${result.grade}`, `Checked in for ${EVENT_DAYS.find((d) => d.day === day)?.label}.`)}
             {scanState === 'already' && result && resultBox('border-warn/30', 'bg-warn/[0.08]', 'bg-warn', result.full_name, `${(result as any).team?.team_name} · ${result.grade}`, `Already checked in for ${EVENT_DAYS.find((d) => d.day === day)?.label} at ${result.lastCheckinAt ? new Date(result.lastCheckinAt).toLocaleTimeString() : '–'}`)}
-            {scanState === 'error' && resultBox('border-bad/30', 'bg-bad/[0.08]', 'bg-bad', 'Scan Failed', undefined, errorMsg)}
+            {scanState === 'error' && (
+              <>
+                {resultBox('border-bad/30', 'bg-bad/[0.08]', 'bg-bad', 'Scan Failed', undefined, errorMsg)}
+                <a href="/admin/attendance" className="mt-2 block rounded-lg border border-line py-2.5 text-center font-mono text-[0.62rem] font-bold uppercase tracking-[0.12em] text-ink-sub transition-colors hover:border-brand/60 hover:text-brand">
+                  Check in manually instead →
+                </a>
+              </>
+            )}
 
             {scanState !== 'idle' && scanState !== 'scanning' && (
               <button onClick={scanNext} className="mt-4 w-full rounded-lg bg-gradient-to-br from-brand to-brand-blue py-3 font-mono text-xs font-bold uppercase tracking-[0.12em] text-base transition-opacity hover:opacity-90">
